@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Internship Application</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:        #030a15;
+      --bg-card:        #071426;
+      --bg-input:       #050e1e;
+      --bg-metric:      #04101f;
+      --text-primary:   #d6e8ff;
+      --text-secondary: #6a8eb5;
+      --text-tertiary:  #304a6a;
+      --border:         rgba(0, 190, 190, 0.12);
+      --border-focus:   #00d4aa;
+      --accent:         #00d4aa;
+      --accent-blue:    #00aaff;
+      --amber:          #f5a623;
+      --danger-bg:      rgba(255, 60, 90, 0.07);
+      --danger-text:    #ff7a9a;
+      --danger-border:  rgba(255, 60, 90, 0.22);
+      --radius-md:      10px;
+      --radius-lg:      16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-page);
+      background-image: radial-gradient(ellipse 90% 45% at 50% -8%, rgba(0, 212, 170, 0.07) 0%, transparent 70%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 3.5rem 1rem 5rem;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    /* ---- Header ---- */
+    .page-header { margin-bottom: 2.25rem; }
+
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 0.65rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      width: 22px;
+      height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.55rem;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* ---- Form Card ---- */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.45), transparent);
+    }
+
+    /* ---- Fields ---- */
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field-group { margin-bottom: 1.3rem; }
+    .field-group:last-of-type { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    textarea {
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-input);
+      border: 1px solid rgba(0, 190, 190, 0.1);
+      border-radius: var(--radius-md);
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      resize: vertical;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--text-tertiary); }
+
+    input:hover, textarea:hover { border-color: rgba(0, 212, 170, 0.2); }
+
+    input:focus, textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.09), 0 0 14px rgba(0, 212, 170, 0.04);
+      background: #060f1f;
+    }
+
+    textarea { min-height: 160px; line-height: 1.65; }
+
+    /* ---- Field footer ---- */
+    .field-footer {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-top: 7px;
+      gap: 8px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .char-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ---- Divider ---- */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 1.3rem 0;
+    }
+
+    /* ---- Submit row ---- */
+    .submit-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.3rem;
+    }
+
+    .btn-submit {
+      flex: 1;
+      background: linear-gradient(135deg, #00d4aa 0%, #00aadd 100%);
+      color: #020d1a;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 12px 20px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .btn-submit::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; bottom: 0;
+      width: 60%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+      transition: left 0.45s ease;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0, 212, 170, 0.28);
+    }
+
+    .btn-submit:hover::after { left: 150%; }
+
+    .btn-submit:active {
+      transform: scale(0.98) translateY(0);
+      box-shadow: none;
+    }
+
+    .btn-submit:disabled {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid rgba(0, 190, 190, 0.14);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-reset:hover {
+      background: rgba(0, 212, 170, 0.05);
+      border-color: rgba(0, 212, 170, 0.28);
+      color: var(--text-primary);
+    }
+
+    /* ---- Spinner ---- */
+    .spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(2, 13, 26, 0.25);
+      border-top-color: #020d1a;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Error ---- */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--danger-text);
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius-md);
+      padding: 11px 14px;
+      margin-top: 0.9rem;
+    }
+
+    .error-msg.visible { display: flex; }
+
+    /* ---- Result Card ---- */
+    .result-card {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      position: relative;
+      animation: slideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.55), transparent);
+    }
+
+    .result-card.visible { display: block; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 212, 170, 0.025);
+    }
+
+    .result-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+      color: var(--text-primary);
+    }
+
+    .status-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 11px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-accepted {
+      background: rgba(0, 212, 130, 0.1);
+      color: #00d48a;
+      border: 1px solid rgba(0, 212, 130, 0.2);
+    }
+
+    .badge-review {
+      background: rgba(245, 166, 35, 0.1);
+      color: var(--amber);
+      border: 1px solid rgba(245, 166, 35, 0.2);
+    }
+
+    .badge-rejected {
+      background: rgba(255, 60, 90, 0.08);
+      color: #ff7a9a;
+      border: 1px solid rgba(255, 60, 90, 0.2);
+    }
+
+    .result-body { padding: 1.5rem; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 1.1rem;
+    }
+
+    .metric {
+      background: var(--bg-metric);
+      border: 1px solid rgba(0, 190, 190, 0.08);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1rem;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .score-bar-wrap {
+      background: rgba(255,255,255,0.04);
+      border-radius: 4px;
+      height: 4px;
+      overflow: hidden;
+      margin-top: 9px;
+    }
+
+    .score-bar {
+      height: 100%;
+      border-radius: 4px;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-blue));
+      transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .role-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: rgba(0, 212, 170, 0.035);
+      border: 1px solid rgba(0, 212, 170, 0.1);
+      border-radius: var(--radius-md);
+    }
+
+    .role-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .role-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .api-note {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-align: center;
+      margin-top: 0.8rem;
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      .field-row  { grid-template-columns: 1fr; }
+      .metrics    { grid-template-columns: 1fr 1fr; }
+      h1          { font-size: 26px; }
+      .card       { padding: 1.35rem; }
+      .result-body{ padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="page-header">
+    <p class="eyebrow">AI-Powered Screening</p>
+    <h1>Apply for an <em>Internship</em></h1>
+    <p class="subtitle">Submit your CV and let our AI agents analyze your profile and recommend the best-fit role.</p>
+  </div>
+
+  <!-- FORM CARD -->
+  <div class="card">
+    <div class="field-row">
+      <div class="field-group">
+        <label for="f-name">Full Name</label>
+        <input type="text" id="f-name" placeholder="Jane Smith" autocomplete="name" />
+      </div>
+      <div class="field-group">
+        <label for="f-email">Email</label>
+        <input type="email" id="f-email" placeholder="jane@example.com" autocomplete="email" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field-group">
+      <label for="f-cv">CV / Resume</label>
+      <textarea id="f-cv" placeholder="Paste your education, experience, projects, and tech stack here…"></textarea>
+      <div class="field-footer">
+        <p class="hint">Copy and paste directly from your PDF. More detail = more accurate scoring.</p>
+        <span class="char-count"><span id="char-num">0</span> chars</span>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <button class="btn-submit" id="btn-sub" onclick="submitForm()">
+        <i class="ti ti-sparkles"></i>
+        Analyze &amp; Submit
+      </button>
+      <button class="btn-reset" onclick="resetForm()">Clear</button>
+    </div>
+
+    <div class="error-msg" id="err-box">
+      <i class="ti ti-alert-circle"></i>
+      <span id="err-text">An error occurred.</span>
+    </div>
+  </div>
+
+  <!-- RESULT CARD -->
+  <div class="result-card" id="result-card">
+    <div class="result-header">
+      <i class="ti ti-user-check" style="color:var(--accent);font-size:16px;flex-shrink:0"></i>
+      <span class="result-title" id="res-name">—</span>
+      <span class="status-badge" id="res-badge">—</span>
+    </div>
+    <div class="result-body">
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Score</div>
+          <div class="metric-value" id="res-score">—</div>
+          <div class="score-bar-wrap"><div class="score-bar" id="score-bar"></div></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Status</div>
+          <div class="metric-value" id="res-status" style="font-size:13px;font-weight:500;color:var(--text-primary);margin-top:4px">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Analyst</div>
+          <div class="metric-value" style="font-size:12px;font-weight:400;color:var(--text-secondary);margin-top:4px">AI agents</div>
+        </div>
+      </div>
+      <div class="role-line">
+        <i class="ti ti-briefcase" style="font-size:16px;color:var(--accent);flex-shrink:0"></i>
+        <span class="role-label">Recommended role</span>
+        <span class="role-value" id="res-role">—</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="api-note" id="api-note">POST /applications → http://localhost:8000</p>
+
+</div>
+<script>
+  const BASE_URL = 'http://localhost:8000';
+
+  document.getElementById('f-cv').addEventListener('input', function () {
+    document.getElementById('char-num').textContent = this.value.length;
+  });
+
+  function showError(msg) {
+    const box = document.getElementById('err-box');
+    document.getElementById('err-text').textContent = msg;
+    box.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('err-box').classList.remove('visible');
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('btn-sub');
+    if (on) {
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Analyzing…';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-sparkles"></i> Analyze &amp; Submit';
+    }
+  }
+
+  function badgeClass(status) {
+    if (!status) return 'badge-review';
+    const s = status.toLowerCase();
+    if (s.includes('accept') || s.includes('approved')) return 'badge-accepted';
+    if (s.includes('reject') || s.includes('declined')) return 'badge-rejected';
+    return 'badge-review';
+  }
+
+  function showResult(data, name) {
+    document.getElementById('res-name').textContent = name;
+
+    const score  = data.candidate_score ?? data.score ?? null;
+    const role   = data.recommended_role ?? data.role ?? 'Not specified';
+    const status = data.status ?? '—';
+
+    if (score !== null) {
+      const n = Math.round(Number(score));
+      document.getElementById('res-score').textContent = n;
+      setTimeout(() => {
+        document.getElementById('score-bar').style.width = Math.min(n, 100) + '%';
+      }, 50);
+    }
+
+    document.getElementById('res-role').textContent   = role;
+    document.getElementById('res-status').textContent = status;
+
+    const badge = document.getElementById('res-badge');
+    badge.textContent = status;
+    badge.className = 'status-badge ' + badgeClass(status);
+
+    document.getElementById('result-card').classList.add('visible');
+    document.getElementById('api-note').style.display = 'block';
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function submitForm() {
+    hideError();
+
+    const name    = document.getElementById('f-name').value.trim();
+    const email   = document.getElementById('f-email').value.trim();
+    const cv_text = document.getElementById('f-cv').value.trim();
+
+    if (!name)                          { showError('Please enter your full name.');                            return; }
+    if (!email || !email.includes('@')) { showError('Please enter a valid email address.');                     return; }
+    if (cv_text.length < 30)            { showError('CV is too short — please enter at least 30 characters.'); return; }
+
+    setLoading(true);
+
+    try {
+      const resp = await fetch(BASE_URL + '/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, cv_text })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      showResult(data, name);
+    } catch (err) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        showError('Could not reach the backend — make sure the server is running on localhost:8000.');
+      } else {
+        showError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('f-name').value  = '';
+    document.getElementById('f-email').value = '';
+    document.getElementById('f-cv').value    = '';
+    document.getElementById('char-num').textContent = '0';
+    document.getElementById('result-card').classList.remove('visible');
+    document.getElementById('api-note').style.display = 'none';
+    document.getElementById('score-bar').style.width = '0%';
+    hideError();
+  }
+</script>
+</body>
+</html>
