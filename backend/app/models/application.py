@@ -13,3 +13,4 @@ class ApplicationResponse(BaseModel):
     candidate_score: int
     recommended_role: str
     status: str
+    report: str

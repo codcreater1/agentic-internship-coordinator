@@ -13,10 +13,8 @@ def create_application(application: Application):
     return ApplicationResponse(
         name=application.name,
         email=application.email,
-        candidate_score=result.get("candidate_score", 85),
-        recommended_role=result.get(
-            "recommendation",
-            "Backend Developer Internship",
-        ),
-        status="interview",
+        candidate_score=result["candidate_score"],
+        recommended_role=result["recommended_role"],
+        status=result["status"],
+        report=result["report"],
     )

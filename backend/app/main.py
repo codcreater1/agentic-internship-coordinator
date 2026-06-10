@@ -13,6 +13,14 @@ def root():
     return {"message": "Backend is running"}
 
 
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "backend",
+    }
+
+
 @app.get("/test-agent")
 def test_agent():
     result = graph.invoke(
