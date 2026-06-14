@@ -3,6 +3,8 @@ from fastapi import APIRouter
 from app.models.application import Application, ApplicationResponse
 from app.services.application_service import ApplicationService
 
+
+
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
