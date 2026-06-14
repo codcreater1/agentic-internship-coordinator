@@ -23,3 +23,4 @@ AI-powered internship coordination platform designed to automate candidate evalu
 ## High-Level Workflow
 
 Candidate → Frontend → FastAPI → LangGraph Agents → n8n → Gmail
+Pair Extraordinaire test 
