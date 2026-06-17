@@ -14,3 +14,5 @@ class ApplicationResponse(BaseModel):
     recommended_role: str
     status: str
     report: str
+    email_subject: str
+    email_body: str
