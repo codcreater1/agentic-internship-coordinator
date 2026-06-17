@@ -3,8 +3,6 @@ from fastapi import APIRouter
 from app.models.application import Application, ApplicationResponse
 from app.services.application_service import ApplicationService
 
-
-
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
@@ -19,4 +17,6 @@ def create_application(application: Application):
         recommended_role=result["recommended_role"],
         status=result["status"],
         report=result["report"],
+        email_subject=result["email_subject"],
+        email_body=result["email_body"],
     )
