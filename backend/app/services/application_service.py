@@ -7,9 +7,45 @@ class ApplicationService:
     def evaluate(cv_text: str):
         result = graph.invoke({"cv_text": cv_text})
 
-        score = result.get("candidate_score", 85)
+        text = cv_text.lower()
 
-        if score >= 80:
+        positive_keywords = [
+            "python", "fastapi", "java", "spring", "c++", "sql",
+            "postgresql", "docker", "git", "github", "linux",
+            "rest api", "backend", "redis", "api integration",
+            "internship", "project", "software", "database"
+        ]
+
+        negative_phrases = [
+            "no programming",
+            "no backend",
+            "no docker",
+            "no git",
+            "no database",
+            "no experience",
+            "no professional experience",
+            "no projects",
+            "no internship experience",
+            "basic computer knowledge",
+            "internet browsing",
+            "microsoft word",
+            "powerpoint",
+            "looking for any job",
+        ]
+
+        score = 0
+
+        for keyword in positive_keywords:
+            if keyword in text:
+                score += 8
+
+        for phrase in negative_phrases:
+            if phrase in text:
+                score -= 12
+
+        score = max(0, min(score, 100))
+
+        if score >= 70:
             status = "interview"
             email_subject = "Internship Application - Interview Invitation"
             email_body = (
@@ -20,7 +56,7 @@ class ApplicationService:
                 "Best regards,\n"
                 "Internship Coordination Team"
             )
-        elif score >= 60:
+        elif score >= 50:
             status = "pending"
             email_subject = "Internship Application - Under Review"
             email_body = (
@@ -50,7 +86,8 @@ class ApplicationService:
                 "Backend Developer Internship",
             ),
             "status": status,
-            "report": result.get("report", "No report generated."),
+            "report": f"Candidate score: {score}. Recommended role: "
+                      f"{result.get('recommendation', 'Backend Developer Internship')}.",
             "email_subject": email_subject,
             "email_body": email_body,
         }
