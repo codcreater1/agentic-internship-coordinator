@@ -12,3 +12,5 @@ class CVAnalysisResponse(BaseModel):
     report: str
     email_subject: str
     email_body: str
+    contract_task_id: str | None = None
+    signed_contract_download_url: str | None = None
