@@ -50,13 +50,6 @@ def health_check():
     return get_health()
 
 
-@app.get("/test-agent")
-def test_agent():
-    return {
-        "message": "Agent test endpoint is working"
-    }
-
-
 app.include_router(applications.router)
 app.include_router(cv.router)
 app.include_router(pdf.router)
