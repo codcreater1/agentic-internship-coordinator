@@ -1,0 +1,40 @@
+name: Daily Profile Update
+
+on:
+  schedule:
+    - cron: '47 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-profile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update profile README
+        env:
+          GH_TOKEN: ${{ secrets.PROFILE_PAT }}
+        run: |
+          DAY=$(date +%A)
+          DATE=$(date +%Y-%m-%d)
+          WEEK=$(date +%V)
+
+          # Fetch current README
+          RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            https://api.github.com/repos/codcreater1/Murat-Can-Nergiz/contents/README.md)
+
+          SHA=$(echo "$RESPONSE" | grep '"sha"' | head -1 | cut -d'"' -f4)
+          CONTENT=$(echo "$RESPONSE" | grep '"content"' | cut -d'"' -f4 | tr -d '\\n' | base64 -d)
+
+          # Update the last-active line (adds/updates a hidden comment at the bottom)
+          UPDATED=$(echo "$CONTENT" | sed '/<!-- last-active:/d')
+          UPDATED="$UPDATED
+<!-- last-active: $DATE -->"
+
+          ENCODED=$(echo "$UPDATED" | base64 -w 0)
+
+          curl -s -X PUT \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/repos/codcreater1/Murat-Can-Nergiz/contents/README.md \
+            -d "{\"message\":\"chore: daily activity update [$DATE]\",\"content\":\"$ENCODED\",\"sha\":\"$SHA\"}"
+
+          echo "Done: $DATE"
