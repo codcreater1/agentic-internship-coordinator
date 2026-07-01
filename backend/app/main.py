@@ -46,10 +46,8 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "service": "Agentic Internship Coordinator"
-    }
+    from app.core.health import get_health
+    return get_health()
 
 
 @app.get("/test-agent")
