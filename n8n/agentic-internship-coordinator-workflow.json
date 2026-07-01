@@ -1,0 +1,155 @@
+{
+  "name": "Agentic Internship Coordinator",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject:\"CV Application\" has:attachment"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [-320, 0],
+      "id": "9927a08e-7f94-45a6-b40d-a11f49b80bd3",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [-104, 0],
+      "id": "f8c366a3-65e1-40e0-a504-aca7f80d9108",
+      "name": "Get a message",
+      "webhookId": "81f151cc-f941-41c1-bcbd-3c6cafe81968",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [112, 0],
+      "id": "c1d2e3f4-1111-2222-3333-444455556666",
+      "name": "Extract PDF Text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-NGROK-SUBDOMAIN.ngrok-free.app/applications/from-n8n",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Get a message').item.json.from.value[0].name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Get a message').item.json.from.value[0].address }}"
+            },
+            {
+              "name": "cv_text",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [328, 0],
+      "id": "66a1ffdf-55b9-44d3-8027-dd9a40dd9b95",
+      "name": "Evaluate (FastAPI)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.email_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [544, 0],
+      "id": "a5ed7b89-cf4c-4ab8-bdcf-cf6ede5a653b",
+      "name": "Reply to Candidate",
+      "webhookId": "78c105f6-3ef7-4017-8445-1d9c61dd790d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          { "node": "Get a message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          { "node": "Extract PDF Text", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          { "node": "Evaluate (FastAPI)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Evaluate (FastAPI)": {
+      "main": [
+        [
+          { "node": "Reply to Candidate", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

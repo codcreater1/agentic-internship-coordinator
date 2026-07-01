@@ -1,0 +1,574 @@
+/* ------------------------------------------------------------------ *
+ * Agentic Internship Coordinator — dashboard styling.
+ * Builds on the theme variables defined in index.css (light + dark).
+ * ------------------------------------------------------------------ */
+
+/* index.css constrains #root to a narrow centered column (Vite template
+   leftover). Override it for a full-width app shell. */
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  text-align: left;
+  border-inline: none;
+}
+
+:root {
+  --ok: #1faa6b;
+  --ok-bg: rgba(31, 170, 107, 0.12);
+  --warn: #d9920a;
+  --warn-bg: rgba(217, 146, 10, 0.14);
+  --bad: #e0533d;
+  --bad-bg: rgba(224, 83, 61, 0.12);
+  --panel-bg: var(--bg);
+  --radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --panel-bg: #1b1d25;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ----------------------------- Sidebar ---------------------------- */
+.sidebar {
+  width: 252px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.brand p {
+  font-size: 12.5px;
+  color: var(--text);
+}
+.brandMark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+}
+.navItem:hover {
+  background: var(--social-bg);
+}
+.navItem.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sideStatus {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--social-bg);
+}
+.sideStatus strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-h);
+}
+.sideStatus p {
+  font-size: 12px;
+}
+.pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 0 rgba(31, 170, 107, 0.5);
+  animation: pulse 1.8s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  70% { box-shadow: 0 0 0 8px rgba(31, 170, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 170, 107, 0); }
+}
+
+/* ------------------------------ Main ------------------------------ */
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 26px 30px;
+  border-bottom: 1px solid var(--border);
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.top h1 {
+  font-size: 30px;
+  letter-spacing: -0.6px;
+  margin: 0 0 8px;
+}
+.top .sub {
+  max-width: 520px;
+  font-size: 14px;
+  line-height: 150%;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text);
+}
+.search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 14px;
+  width: 160px;
+}
+.iconBtn,
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.iconBtn { padding: 9px; }
+.refresh:hover,
+.iconBtn:hover {
+  border-color: var(--accent-border);
+}
+.spinning {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------------------- Workspace --------------------------- */
+.workspace {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr) 340px;
+  gap: 18px;
+  padding: 22px 30px 40px;
+  align-items: start;
+}
+@media (max-width: 1280px) {
+  .workspace { grid-template-columns: 300px minmax(0, 1fr); }
+  .rightCol { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+}
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: 1fr; }
+  .rightCol { grid-template-columns: 1fr; }
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ----------------------------- Panels ----------------------------- */
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.panelHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.panelHead h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-h);
+}
+.panelHead p {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 34px 16px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+.empty h3 { margin: 4px 0 0; color: var(--text-h); }
+.empty.big { padding: 80px 20px; }
+.empty small { font-size: 12px; opacity: 0.8; }
+.empty svg { color: var(--accent); opacity: 0.85; }
+
+/* ------------------------- Candidate list ------------------------- */
+.candidateList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.candidate {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.candidate:hover { border-color: var(--accent-border); }
+.candidate.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.fileTag {
+  grid-row: 1 / span 2;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--text);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  opacity: 0.7;
+}
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+.avatar.large { width: 52px; height: 52px; font-size: 18px; }
+.candidateMeta { min-width: 0; }
+.candidateMeta strong { display: block; color: var(--text-h); font-size: 14px; }
+.candidateMeta p { font-size: 12.5px; color: var(--accent); }
+.candidateMeta small { font-size: 11.5px; color: var(--text); opacity: 0.8; }
+.candidateRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.scorePill {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--code-bg);
+  border-radius: 8px;
+  padding: 2px 9px;
+}
+
+/* ---------------------------- Status stamp ------------------------ */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.stampDot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.stamp.interview { color: var(--ok); background: var(--ok-bg); }
+.stamp.pending { color: var(--warn); background: var(--warn-bg); }
+.stamp.rejected { color: var(--bad); background: var(--bad-bg); }
+
+/* -------------------------- Candidate details --------------------- */
+.profileTop {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.caseLabel {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.6;
+}
+.profileHeading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.profileHeading h2 { margin: 0; font-size: 22px; }
+.profileHeading p { font-size: 13px; }
+
+.scoreHero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--social-bg);
+  position: relative;
+  margin-bottom: 16px;
+}
+.gauge { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
+.gaugeTrack { stroke: var(--border); }
+.gaugeValue {
+  stroke: var(--accent);
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 0.6s ease;
+}
+.gaugeReadout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.gaugeNumber { font-size: 30px; font-weight: 700; color: var(--text-h); }
+.gaugeUnit { font-size: 10px; letter-spacing: 1.5px; color: var(--text); }
+.scoreContext .eyebrow { margin-bottom: 4px; }
+.scoreContext h3 { margin: 0 0 4px; color: var(--text-h); font-size: 16px; }
+.scoreCaption { font-size: 12.5px; line-height: 145%; }
+.scoreBrain { position: absolute; top: 16px; right: 16px; color: var(--accent); opacity: 0.6; }
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.miniPanel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.miniPanel p { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.75; }
+.miniPanel h3 { margin: 5px 0 0; font-size: 14.5px; color: var(--text-h); }
+
+.report {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--code-bg);
+  margin-bottom: 16px;
+}
+.report h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+}
+.report p {
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  line-height: 158%;
+  color: var(--text-h);
+}
+
+/* ------------------------------ Buttons --------------------------- */
+.actions { display: flex; gap: 10px; }
+.primary,
+.ghost,
+.disabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+.primary { background: var(--accent); color: #fff; }
+.primary:hover { filter: brightness(1.07); }
+.primary:disabled { opacity: 0.6; cursor: default; }
+.ghost { background: transparent; border-color: var(--border); color: var(--text-h); }
+.ghost:hover { border-color: var(--accent-border); }
+.ghost.block { width: 100%; margin: 10px 0; }
+.disabled { background: var(--code-bg); color: var(--text); cursor: default; }
+
+/* ----------------------------- Workflow --------------------------- */
+.timeline { display: flex; flex-direction: column; gap: 4px; }
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 10px;
+  border-radius: 10px;
+  opacity: 0.5;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 19px;
+  top: 34px;
+  bottom: -4px;
+  width: 1.5px;
+  background: var(--border);
+}
+.step svg { color: var(--text); flex-shrink: 0; margin-top: 1px; }
+.step strong { display: block; font-size: 13.5px; color: var(--text-h); }
+.step p { font-size: 12px; }
+.step.done { opacity: 1; }
+.step.done svg { color: var(--ok); }
+
+/* ----------------------------- Contract --------------------------- */
+.pdfFrame {
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+.signArea { margin-top: 6px; }
+.signLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+.sigPad {
+  width: 100%;
+  height: 200px;
+  border: 1.5px dashed var(--accent-border);
+  border-radius: 12px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+.signButtons { display: flex; gap: 10px; margin-top: 10px; }
+.signButtons .primary { flex: 1; }
+.signError { color: var(--bad); font-size: 12.5px; margin-top: 8px; }
+.signedBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--ok);
+  border-radius: 12px;
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.signedBox strong { display: block; color: var(--text-h); font-size: 14px; }
+.signedBox a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+}

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/.venv/
+
+# Environment
+.env
+backend/.env
+
+# Local data / artifacts
+backend/applications.db
+backend/tmp/
+temp_cv.pdf
+
+# Node / frontend
+node_modules/
+dist/
+build/

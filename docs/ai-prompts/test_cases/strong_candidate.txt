@@ -1,0 +1,1 @@
+Computer Engineering student with Python, FastAPI, SQL, Git, Docker and REST API project experience. Built a crypto tracker app and backend API projects.
