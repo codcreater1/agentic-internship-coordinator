@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from contextlib import asynccontextmanager
+from app.core.logging_config import setup_logging
+setup_logging()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
