@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.md
+frontend/
+n8n/
+docs/
+*.db
+*.pdf
+__pycache__/
+*.pyc
+.env
