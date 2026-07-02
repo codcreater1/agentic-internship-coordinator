@@ -30,6 +30,8 @@ export default function App() {
 
   useEffect(() => {
     loadApplications();
+    const interval = setInterval(loadApplications, 12000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = useMemo(() => {
