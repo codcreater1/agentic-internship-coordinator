@@ -14,6 +14,9 @@ services:
       - PDFSIGN_API_SECRET_KEY=${API_SECRET_KEY:-}
       - PDFSIGN_STORAGE_ROOT=/data/tmp
       - PDFSIGN_DB_PATH=/data/applications.db
+    networks:
+      - coolify
+      - default
 
   frontend:
     build:
@@ -25,6 +28,15 @@ services:
       - "80"
     depends_on:
       - backend
+    networks:
+      - coolify
+      - default
+
+networks:
+  coolify:
+    external: true
+  default:
+    driver: bridge
 
 volumes:
   app_data:
