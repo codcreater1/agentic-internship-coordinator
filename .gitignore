@@ -18,3 +18,15 @@ temp_cv.pdf
 node_modules/
 dist/
 build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+frontend/dist/
+*.log
