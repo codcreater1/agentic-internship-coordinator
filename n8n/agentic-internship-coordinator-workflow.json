@@ -63,7 +63,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://shuttle-capacity-meal-opens.trycloudflare.com/applications/from-n8n",
+        "url": "https://pomelo-6.codewithpeter.com/applications/from-n8n",
         "sendBody": true,
         "contentType": "json",
         "bodyParameters": {
