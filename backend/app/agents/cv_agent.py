@@ -64,6 +64,7 @@ def analyze_cv(state):
         ),
         user=f"Candidate CV:\n\n{cv_text}",
         schema=_EVALUATION_SCHEMA,
+        trace_name="cv-evaluation",
     )
 
     if result is None:

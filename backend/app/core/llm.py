@@ -1,16 +1,12 @@
 """Thin wrapper around an OpenAI-compatible LLM API for structured CV evaluation.
 
-Provider-agnostic: it talks to any OpenAI-compatible endpoint via the ``openai``
-SDK, so you can use a **free** provider. Defaults to Groq (free, fast). Switch
-providers by changing three env vars — see ``.env.example``:
+Provider-agnostic: talks to any OpenAI-compatible endpoint via the ``openai``
+SDK. Defaults to Groq (free, fast). Switch providers via env vars — see
+``.env.example``.
 
-    Groq    (free):  LLM_API_KEY=gsk_...   base_url default,  model llama-3.3-70b-versatile
-    Gemini  (free):  LLM_API_KEY=...        PDFSIGN_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/   PDFSIGN_LLM_MODEL=gemini-2.0-flash
-    OpenAI  (paid):  LLM_API_KEY=sk-...     PDFSIGN_LLM_BASE_URL=https://api.openai.com/v1   PDFSIGN_LLM_MODEL=gpt-4o-mini
-
-:func:`complete_json` asks the model for a JSON object matching a caller-supplied
-schema and returns it as a ``dict`` — or ``None`` if no API key is configured or
-the call fails, so callers fall back to deterministic logic and keep working.
+When ``LANGFUSE_PUBLIC_KEY`` and ``LANGFUSE_SECRET_KEY`` are set, every LLM
+call is automatically traced in LangFuse (latency, tokens, input/output).
+Set ``LANGFUSE_HOST`` to self-host; defaults to cloud.langfuse.com.
 """
 
 from __future__ import annotations
@@ -31,13 +27,20 @@ def _api_key() -> str:
 
 
 def is_enabled() -> bool:
-    """True when an LLM API key is available in the environment."""
     return bool(_api_key())
+
+
+def _langfuse_enabled() -> bool:
+    return bool(os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"))
 
 
 @lru_cache(maxsize=1)
 def _client():
-    from openai import OpenAI
+    if _langfuse_enabled():
+        from langfuse.openai import OpenAI
+        logger.info("LLM client initialised with LangFuse observability")
+    else:
+        from openai import OpenAI
 
     return OpenAI(api_key=_api_key(), base_url=settings.llm_base_url)
 
@@ -48,11 +51,12 @@ def complete_json(
     user: str,
     schema: dict[str, Any],
     max_tokens: int = 1500,
+    trace_name: str = "llm-call",
 ) -> dict[str, Any] | None:
-    """Call the LLM with a JSON-only response constrained to *schema*.
+    """Call the LLM and return a JSON dict matching *schema*, or ``None`` on failure.
 
-    Returns the parsed object, or ``None`` if AI is disabled or anything goes
-    wrong (missing key, API error, malformed JSON). Never raises.
+    ``trace_name`` labels the call in LangFuse (e.g. "cv-evaluation",
+    "email-generation"). Ignored when LangFuse is not configured.
     """
     if not is_enabled():
         return None
@@ -64,19 +68,23 @@ def complete_json(
         f"{json.dumps(schema)}"
     )
 
+    kwargs: dict[str, Any] = dict(
+        model=settings.llm_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.2,
+        max_tokens=max_tokens,
+    )
+    if _langfuse_enabled():
+        kwargs["name"] = trace_name
+
     try:
-        response = _client().chat.completions.create(
-            model=settings.llm_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=max_tokens,
-        )
+        response = _client().chat.completions.create(**kwargs)
         text = (response.choices[0].message.content or "").strip()
-    except Exception:  # noqa: BLE001 — degrade gracefully on any SDK/API error
+    except Exception:
         logger.exception("LLM request failed; falling back to deterministic logic")
         return None
 

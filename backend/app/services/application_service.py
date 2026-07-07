@@ -95,6 +95,7 @@ class ApplicationService:
                 f"Weaknesses: {', '.join(weaknesses) or 'n/a'}"
             ),
             schema=_EMAIL_SCHEMA,
+            trace_name="email-generation",
         )
 
         if not result or "subject" not in result or "body" not in result:
