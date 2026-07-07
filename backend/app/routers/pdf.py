@@ -10,7 +10,6 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 
-from app.core.config import settings
 from app.core.exceptions import AppError, SignedPdfNotReadyError, TaskNotFoundError
 from app.core.models import PageGeometry, SignResponse, UploadResponse
 from app.services.file_service import FileService, file_service
@@ -138,10 +137,11 @@ async def sign_pdf(
 
     token = create_download_token(task_id)
 
-    download_url = (
-        f"{settings.api_prefix}/pdf/download/{task_id}"
-        f"?token={token}"
-    )
+    # NOTE: routers are mounted in app.main without settings.api_prefix, so
+    # the URL here must match the router's own prefix ("/pdf"), not be
+    # prepended with api_prefix — see the identical, correctly-built URL in
+    # app/routers/applications.py:sign_application for the working pattern.
+    download_url = f"/pdf/download/{task_id}?token={token}"
 
     return SignResponse(
         task_id=task_id,
