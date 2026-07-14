@@ -91,6 +91,12 @@ def get_application(index: int):
     return application
 
 
+@router.delete("/by-id/{application_id}", status_code=204)
+def delete_application(application_id: str):
+    if not repo.delete(application_id):
+        raise HTTPException(status_code=404, detail="Application not found")
+
+
 @router.get("/{index}/contract-preview")
 def preview_contract(index: int):
     application = repo.get_by_index(index)

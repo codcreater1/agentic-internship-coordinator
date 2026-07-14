@@ -56,3 +56,4 @@ zstandard==0.25.0
 Pillow
 reportlab
 pytest
+langfuse
