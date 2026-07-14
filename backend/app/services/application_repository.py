@@ -55,6 +55,13 @@ def update(application: ApplicationResponse) -> ApplicationResponse:
     return application
 
 
+def delete(application_id: str) -> bool:
+    """Remove one application by id. Returns True if a row was deleted."""
+    with _lock, _connect() as conn:
+        cur = conn.execute("DELETE FROM applications WHERE id = ?", (application_id,))
+        return cur.rowcount > 0
+
+
 def list_all() -> list[ApplicationResponse]:
     with _connect() as conn:
         rows = conn.execute(
