@@ -73,10 +73,16 @@ def send_signed_contract(
         )
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise EmailSendError(
+        message = (
             f"n8n webhook returned {exc.response.status_code}: {exc.response.text[:200]}"
-        ) from exc
+        )
+        logger.error("Contract email failed — %s", message)
+        raise EmailSendError(message) from exc
     except httpx.HTTPError as exc:
-        raise EmailSendError(f"Could not reach the n8n webhook: {exc}") from exc
+        # Log the exception type too: a bare message like "" is common for
+        # connect/DNS errors and tells the operator nothing on its own.
+        message = f"Could not reach the n8n webhook ({type(exc).__name__}): {exc}"
+        logger.error("Contract email failed — %s", message)
+        raise EmailSendError(message) from exc
 
     logger.info("Signed contract emailed via n8n to %s", to)
