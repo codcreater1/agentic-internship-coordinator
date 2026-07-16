@@ -1,7 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Download, FileText, PenLine } from "lucide-react";
+import { CheckCircle2, Download, FileText, Mail, PenLine, Send } from "lucide-react";
 
-import { contractPreviewUrl, signApplication, signedDownloadUrl } from "../services/api";
+import {
+  contractPreviewUrl,
+  sendContract,
+  signApplication,
+  signedDownloadUrl,
+} from "../services/api";
+
+function defaultSubject(app) {
+  return `Internship Agreement - ${app.recommended_role}`;
+}
+
+function defaultBody(app) {
+  const first = (app.name || "").split(" ")[0] || "there";
+  return (
+    `Dear ${first},\n\n` +
+    "Please find attached your internship agreement, signed by the internship " +
+    "coordinator.\n\n" +
+    "Kindly review the document and keep a copy for your records.\n\n" +
+    "Best regards,\n" +
+    "Internship Coordination Team"
+  );
+}
 
 export default function ContractPanel({ selected, refresh }) {
   const canvasRef = useRef(null);
@@ -10,17 +31,33 @@ export default function ContractPanel({ selected, refresh }) {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState("");
 
-  // Reset the pad whenever a different candidate is selected.
+  // Compose state for the "send by email" step.
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+
+  // Reset the pad and the compose form whenever a different candidate is selected.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#13111a";
-    inked.current = false;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#13111a";
+      inked.current = false;
+    }
     setError("");
+    setComposeOpen(false);
+    setSendError("");
+    if (selected) {
+      setTo(selected.email || "");
+      setSubject(defaultSubject(selected));
+      setBody(defaultBody(selected));
+    }
   }, [selected?.id]);
 
   if (!selected) {
@@ -90,13 +127,26 @@ export default function ContractPanel({ selected, refresh }) {
       const dataUrl = canvasRef.current.toDataURL("image/png");
       const updated = await signApplication(selected.originalIndex, dataUrl);
       await refresh();
-      // Download the signed contract right after signing.
       const url = signedDownloadUrl(updated?.signed_contract_download_url);
       if (url) window.open(url, "_blank");
     } catch {
       setError("Signing failed. Is the backend running?");
     } finally {
       setSigning(false);
+    }
+  }
+
+  async function handleSend() {
+    setSendError("");
+    setSending(true);
+    try {
+      await sendContract(selected.originalIndex, { to, subject, body });
+      await refresh();
+      setComposeOpen(false);
+    } catch (err) {
+      setSendError(err.message || "Sending failed.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -135,15 +185,95 @@ export default function ContractPanel({ selected, refresh }) {
           </a>
 
           {signedUrl ? (
-            <div className="signedBox">
-              <CheckCircle2 size={18} />
-              <div>
-                <strong>Signed by coordinator</strong>
-                <a href={signedUrl} target="_blank" rel="noreferrer">
-                  <Download size={14} /> Download signed contract
-                </a>
+            <>
+              <div className="signedBox">
+                <CheckCircle2 size={18} />
+                <div>
+                  <strong>Signed by coordinator</strong>
+                  <a href={signedUrl} target="_blank" rel="noreferrer">
+                    <Download size={14} /> Download signed contract
+                  </a>
+                </div>
               </div>
-            </div>
+
+              {selected.contract_sent_to ? (
+                <div className="sentBox">
+                  <Mail size={16} />
+                  <div>
+                    <strong>Sent to {selected.contract_sent_to}</strong>
+                    <small>
+                      {new Date(selected.contract_sent_at).toLocaleString()}
+                    </small>
+                  </div>
+                </div>
+              ) : !composeOpen ? (
+                <div className="sendPrompt">
+                  <p>Send this signed agreement to the candidate by email?</p>
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => setComposeOpen(true)}
+                  >
+                    <Mail size={16} /> Yes, compose email
+                  </button>
+                </div>
+              ) : (
+                <div className="composeBox">
+                  <label className="composeField">
+                    <span>To</span>
+                    <input
+                      type="email"
+                      value={to}
+                      onChange={(e) => setTo(e.target.value)}
+                      placeholder="candidate@example.com"
+                    />
+                  </label>
+
+                  <label className="composeField">
+                    <span>Subject</span>
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="composeField">
+                    <span>Message</span>
+                    <textarea
+                      rows={7}
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                    />
+                  </label>
+
+                  <p className="composeHint">
+                    <FileText size={13} /> The signed PDF is attached automatically.
+                  </p>
+
+                  {sendError && <p className="signError">{sendError}</p>}
+
+                  <div className="signButtons">
+                    <button
+                      className="ghost"
+                      type="button"
+                      onClick={() => setComposeOpen(false)}
+                      disabled={sending}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={handleSend}
+                      disabled={sending || !to.trim() || !subject.trim() || !body.trim()}
+                    >
+                      <Send size={15} /> {sending ? "Sending..." : "Send email"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="signArea">
               <p className="signLabel">

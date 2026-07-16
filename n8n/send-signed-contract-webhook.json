@@ -1,0 +1,69 @@
+{
+  "name": "Send Signed Contract",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-signed-contract",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-recv",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "webhookId": "send-signed-contract"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.pdf_base64",
+        "options": {
+          "fileName": "={{ $json.body.filename }}",
+          "mimeType": "application/pdf"
+        }
+      },
+      "id": "to-binary",
+      "name": "PDF to Binary",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [20, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.to }}",
+        "subject": "={{ $('Webhook').item.json.body.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Webhook').item.json.body.body }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "id": "gmail-send",
+      "name": "Send Contract Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [240, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "PDF to Binary", "type": "main", "index": 0 }]]
+    },
+    "PDF to Binary": {
+      "main": [[{ "node": "Send Contract Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": {},
+  "tags": []
+}
