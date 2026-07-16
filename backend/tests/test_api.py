@@ -55,6 +55,50 @@ def test_missing_application_returns_404():
     assert client.get("/applications/9999").status_code == 404
 
 
+def _upload_and_sign() -> str:
+    """Upload a blank PDF, sign it, and return the download URL."""
+    doc = fitz.open()
+    doc.new_page()
+    pdf_buf = io.BytesIO()
+    doc.save(pdf_buf)
+    pdf_buf.seek(0)
+
+    upload = client.post(
+        "/pdf/upload",
+        files={"file": ("sample.pdf", pdf_buf, "application/pdf")},
+    )
+    assert upload.status_code == 201
+    task_id = upload.json()["task_id"]
+
+    img = Image.new("RGBA", (50, 20), (255, 0, 0, 255))
+    img_buf = io.BytesIO()
+    img.save(img_buf, format="PNG")
+    img_buf.seek(0)
+
+    signed = client.post(
+        "/pdf/sign",
+        data={"task_id": task_id, "page": 0, "x": 10, "y": 10, "w": 50, "h": 20},
+        files={"image": ("sig.png", img_buf, "image/png")},
+    )
+    assert signed.status_code == 200
+    return signed.json()["download_url"]
+
+
+def test_signed_contract_survives_download():
+    """Regression test: /pdf/download used to schedule remove_task() as a
+    background task, wiping the whole task directory the first time the file was
+    fetched. The dashboard opens that link automatically right after signing, so
+    a signed internship agreement — which is previewed, re-downloaded and
+    emailed to the candidate — was destroyed on first download. Downloading
+    twice must keep working.
+    """
+    download_url = _upload_and_sign()
+
+    assert client.get(download_url).status_code == 200
+    # The file must still be there for the preview / email / re-download paths.
+    assert client.get(download_url).status_code == 200
+
+
 def test_sign_pdf_download_url_is_reachable():
     """Regression test: /pdf/sign previously returned a download_url prefixed
     with settings.api_prefix ("/api/v1/pdf/download/..."), but routers are

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import (
-    APIRouter, BackgroundTasks, Depends, File,
+    APIRouter, Depends, File,
     Form, HTTPException, UploadFile, status,
 )
 from fastapi.responses import FileResponse
@@ -154,7 +154,6 @@ async def sign_pdf(
 async def download_signed(
     task_id: str,
     token: str,
-    background: BackgroundTasks,
     ss: StorageService = Depends(get_storage_service),
 ) -> FileResponse:
 
@@ -180,11 +179,11 @@ async def download_signed(
     if not path.is_file():
         _raise_http(SignedPdfNotReadyError())
 
-    background.add_task(
-        ss.remove_task,
-        task_id,
-    )
-
+    # The task dir is deliberately NOT removed after download. A signed
+    # internship agreement is a lasting record: the dashboard previews it, the
+    # coordinator may re-download it, and it is emailed to the candidate. The
+    # delete-after-download behaviour here came from this service's one-shot
+    # PDF-signing origins and destroyed contracts on first download.
     return FileResponse(
         path=str(path),
         media_type="application/pdf",
