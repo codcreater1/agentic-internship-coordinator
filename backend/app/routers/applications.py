@@ -190,9 +190,11 @@ def send_contract(index: int, request: SendContractRequest):
             candidate_name=application.name,
         )
     except email_service.EmailNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except email_service.EmailSendError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        # 424 (not 502): a CDN in front of the API rewrites upstream 5xx into its
+        # own error page, which would hide the reason from the coordinator.
+        raise HTTPException(status_code=424, detail=str(exc)) from exc
 
     application.contract_sent_to = request.to
     application.contract_sent_at = datetime.now(timezone.utc).isoformat()
