@@ -26,6 +26,14 @@ class SignApplicationRequest(BaseModel):
     h: float = 70
 
 
+class SendContractRequest(BaseModel):
+    """Coordinator-composed delivery of the signed contract."""
+
+    to: EmailStr
+    subject: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=10000)
+
+
 class ApplicationResponse(BaseModel):
     id: str = Field(default_factory=_new_id)
     created_at: str = Field(default_factory=_now_iso)
@@ -41,3 +49,6 @@ class ApplicationResponse(BaseModel):
     signed_contract_path: str | None = None
     contract_task_id: str | None = None
     signed_contract_download_url: str | None = None
+    # Delivery audit trail — who the signed contract went to, and when.
+    contract_sent_to: str | None = None
+    contract_sent_at: str | None = None

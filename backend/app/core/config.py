@@ -102,6 +102,15 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------ #
+    # Outbound email (delegated to n8n so Gmail OAuth stays in one place)
+    # ------------------------------------------------------------------ #
+    n8n_email_webhook_url: str = Field(
+        default="",
+        description="n8n webhook that sends the signed contract by email. "
+                    "Empty disables the dashboard's send-contract feature.",
+    )
+
+    # ------------------------------------------------------------------ #
     # Security
     # ------------------------------------------------------------------ #
     api_secret_key: str = Field(
