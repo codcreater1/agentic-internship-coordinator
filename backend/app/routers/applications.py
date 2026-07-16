@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,9 +9,11 @@ from app.core.security import require_api_key
 from app.models.application import (
     Application,
     ApplicationResponse,
+    SendContractRequest,
     SignApplicationRequest,
 )
 from app.services import application_repository as repo
+from app.services import email_service
 from app.services.application_service import ApplicationService
 from app.services.contract_service import ContractService
 from app.services.pdf_service import pdf_service
@@ -162,5 +165,36 @@ def sign_application(index: int, request: SignApplicationRequest):
         "\n\nThe internship agreement has been signed by the coordinator.\n"
         f"Download link: {download_url}"
     )
+
+    return repo.update(application)
+
+
+@router.post("/{index}/send-contract", response_model=ApplicationResponse)
+def send_contract(index: int, request: SendContractRequest):
+    """Email the signed contract to a coordinator-chosen recipient, via n8n."""
+    application = repo.get_by_index(index)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    if not application.signed_contract_path:
+        raise HTTPException(
+            status_code=400, detail="Contract has not been signed yet"
+        )
+
+    try:
+        email_service.send_signed_contract(
+            to=request.to,
+            subject=request.subject,
+            body=request.body,
+            pdf_path=Path(application.signed_contract_path),
+            candidate_name=application.name,
+        )
+    except email_service.EmailNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except email_service.EmailSendError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    application.contract_sent_to = request.to
+    application.contract_sent_at = datetime.now(timezone.utc).isoformat()
 
     return repo.update(application)

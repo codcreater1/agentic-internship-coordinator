@@ -23,6 +23,20 @@ export async function signApplication(index, signatureImageBase64) {
   return res.json();
 }
 
+export async function sendContract(index, { to, subject, body }) {
+  const res = await fetch(`${API_URL}/applications/${index}/send-contract`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to, subject, body }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail || "Sending failed");
+  }
+  return res.json();
+}
+
 export function contractPreviewUrl(index) {
   return `${API_URL}/applications/${index}/contract-preview`;
 }
