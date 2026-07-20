@@ -7,8 +7,59 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.main import app
+from app.services import application_service
+from app.services.application_service import ApplicationService
 
 client = TestClient(app)
+
+
+def _fake_graph_result(**overrides):
+    base = {
+        "extracted_name": "Ada Lovelace",
+        "candidate_score": 85,
+        "recommendation": "Backend Developer Internship",
+        "report": "Strong candidate.",
+        "strengths": ["Python"],
+        "weaknesses": [],
+        "internship_country": "",
+        "internship_eu_eligible": "unknown",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_non_eu_placement_is_rejected_regardless_of_score(monkeypatch):
+    """Eligibility gate: a strong candidate (85) whose internship placement is
+    outside the EU/EEA must be rejected, not sent to interview."""
+    monkeypatch.setattr(
+        application_service, "graph",
+        type("G", (), {"invoke": staticmethod(
+            lambda _s: _fake_graph_result(internship_country="Turkey",
+                                          internship_eu_eligible="non_eu"))})(),
+    )
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+    assert result["candidate_score"] == 85
+    assert result["status"] == "rejected"
+
+
+def test_eu_placement_high_score_reaches_interview(monkeypatch):
+    monkeypatch.setattr(
+        application_service, "graph",
+        type("G", (), {"invoke": staticmethod(
+            lambda _s: _fake_graph_result(internship_country="Poland",
+                                          internship_eu_eligible="eu"))})(),
+    )
+    assert ApplicationService.evaluate("cv", candidate_name="Ada")["status"] == "interview"
+
+
+def test_unknown_placement_does_not_block(monkeypatch):
+    """A plain CV with no stated placement (unknown) must not be blocked."""
+    monkeypatch.setattr(
+        application_service, "graph",
+        type("G", (), {"invoke": staticmethod(
+            lambda _s: _fake_graph_result(internship_eu_eligible="unknown"))})(),
+    )
+    assert ApplicationService.evaluate("cv", candidate_name="Ada")["status"] == "interview"
 
 
 def test_health():
