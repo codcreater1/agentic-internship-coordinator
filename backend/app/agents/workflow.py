@@ -17,6 +17,8 @@ class CandidateState(TypedDict):
     recommendation: str
     rationale: str
     report: str
+    internship_country: str
+    internship_eu_eligible: str
 
 
 builder = StateGraph(CandidateState)
