@@ -196,6 +196,7 @@ class PdfService:
         y: float,
         w: float,
         h: float,
+        text_stamps: list[tuple[str, float, float]] | None = None,
     ) -> None:
         """Embed *image_bytes* on *page_index* of *source_pdf*, save to *output_pdf*.
 
@@ -203,6 +204,10 @@ class PdfService:
             x, y — top-left of the signature bounding box, in PDF points,
                     using page top-left as origin with y growing downward.
             w, h — box width and height in PDF points (both must be > 0).
+
+        text_stamps — optional (text, x, y) items drawn on the same page in the
+            same save, for values that are only known at signing time (the
+            signing date). Same top-left origin as above.
 
         Save options (garbage=3, deflate=True, clean=True):
             - Drop orphan objects and duplicate streams (garbage=3).
@@ -249,6 +254,13 @@ class PdfService:
                 raise ImageNormalizationError(
                     f"PyMuPDF rejected the signature image: {exc}"
                 ) from exc
+
+            for text, tx, ty in (text_stamps or []):
+                try:
+                    page.insert_text((tx, ty), text, fontsize=10, fontname="helv")
+                except (ValueError, RuntimeError) as exc:
+                    # A stamp is supplementary — never lose the signature over it.
+                    logger.warning("could not stamp %r: %s", text, exc)
 
             try:
                 doc.save(
