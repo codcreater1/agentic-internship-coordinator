@@ -188,3 +188,42 @@ def test_sign_pdf_download_url_is_reachable():
     download = client.get(download_url)
     assert download.status_code == 200
     assert download.headers["content-type"] == "application/pdf"
+
+
+def test_signature_date_is_stamped_at_signing_not_generation(tmp_path):
+    """The date beside the signature must be the date the coordinator signed.
+
+    It used to be printed by create_contract_pdf, i.e. when the contract was
+    generated — often days before signing — so a contract signed on the 21st
+    still showed the 16th. Generation must leave it blank; signing stamps it.
+    """
+    from datetime import datetime, timezone
+
+    from app.services.contract_service import SIGNATURE_DATE_POS, ContractService
+    from app.services.pdf_service import pdf_service
+
+    unsigned = tmp_path / "contract.pdf"
+    ContractService.create_contract_pdf(
+        name="Ada Lovelace", email="ada@example.com",
+        recommended_role="Backend Developer Internship",
+        candidate_score=80, output_path=unsigned,
+    )
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    unsigned_text = fitz.open(str(unsigned))[0].get_text()
+    # Only the header "Date:" field carries a date before signing.
+    assert unsigned_text.count(today) == 1
+
+    img = Image.new("RGBA", (60, 25), (0, 0, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+
+    signed = tmp_path / "signed.pdf"
+    pdf_service.embed_signature(
+        source_pdf=unsigned, output_pdf=signed, image_bytes=buf.getvalue(),
+        page_index=0, x=70, y=600, w=220, h=70,
+        text_stamps=[(today, *SIGNATURE_DATE_POS)],
+    )
+
+    signed_text = fitz.open(str(signed))[0].get_text()
+    assert signed_text.count(today) == 2      # header + signing date
