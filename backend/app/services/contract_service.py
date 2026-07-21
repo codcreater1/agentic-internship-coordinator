@@ -23,6 +23,11 @@ from reportlab.pdfgen import canvas
 _BEAR_BROWN = HexColor("#7A5A2E")
 _PAGE_W, _PAGE_H = A4
 
+# Where the signing date is stamped, in PDF points with a TOP-LEFT origin (the
+# convention pdf_service uses). Mirrors the reportlab position of the date line
+# below, which is drawn at 61 mm from the bottom.
+SIGNATURE_DATE_POS = (_PAGE_W - 73 * mm, _PAGE_H - 63 * mm)
+
 
 class ContractService:
     @staticmethod
@@ -109,9 +114,12 @@ class ContractService:
         c.line(left, 61 * mm, left + 70 * mm, 61 * mm)          # signature line
         c.drawString(left, 55 * mm, "Signature of the Dean's Internship Supervisor")
 
+        # The date beside the signature is intentionally left blank here: it is
+        # the date the coordinator signs, which happens later (often days after
+        # the contract is generated). It is stamped during signing, at
+        # SIGNATURE_DATE_POS below.
         c.drawString(_PAGE_W - 85 * mm, 61 * mm, "Date:")
         c.line(_PAGE_W - 73 * mm, 61 * mm, _PAGE_W - 20 * mm, 61 * mm)
-        c.drawString(_PAGE_W - 73 * mm, 63 * mm, date.today().isoformat())
 
         c.setFont("Helvetica-Oblique", 7)
         c.drawString(left, 15 * mm,

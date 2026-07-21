@@ -15,7 +15,7 @@ from app.models.application import (
 from app.services import application_repository as repo
 from app.services import email_service
 from app.services.application_service import ApplicationService
-from app.services.contract_service import ContractService
+from app.services.contract_service import SIGNATURE_DATE_POS, ContractService
 from app.services.pdf_service import pdf_service
 from app.services.storage_service import storage_service
 from app.services.token_service import create_download_token
@@ -144,6 +144,10 @@ def sign_application(index: int, request: SignApplicationRequest):
 
     signed_path = source_pdf.parent / "signed.pdf"
 
+    # Stamp the date the coordinator actually signs, not the date the contract
+    # was generated (which can be days earlier).
+    signed_on = datetime.now(timezone.utc).date().isoformat()
+
     pdf_service.embed_signature(
         source_pdf=source_pdf,
         output_pdf=signed_path,
@@ -153,6 +157,7 @@ def sign_application(index: int, request: SignApplicationRequest):
         y=request.y,
         w=request.w,
         h=request.h,
+        text_stamps=[(signed_on, *SIGNATURE_DATE_POS)],
     )
 
     token = create_download_token(application.contract_task_id)
