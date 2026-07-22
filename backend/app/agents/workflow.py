@@ -23,6 +23,9 @@ class CandidateState(TypedDict):
     company_name: str
     supervisor_name: str
     supervisor_contact: str
+    # False when the LLM was unreachable and the keyword fallback produced
+    # the score — see ApplicationService.
+    ai_available: bool
 
 
 builder = StateGraph(CandidateState)

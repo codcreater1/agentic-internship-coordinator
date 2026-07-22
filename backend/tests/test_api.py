@@ -30,6 +30,7 @@ def _fake_graph_result(**overrides):
         "company_name": "Acme GmbH",
         "supervisor_name": "Grace Hopper",
         "supervisor_contact": "grace@acme.example",
+        "ai_available": True,
     }
     base.update(overrides)
     return base
@@ -258,6 +259,35 @@ def test_cv_upload_rejects_an_oversized_file():
         files={"file": ("cv.pdf", oversized, "application/pdf")},
     )
     assert r.status_code == 413
+
+
+def test_ai_outage_never_rejects_a_candidate(monkeypatch):
+    """When the model is unreachable the score comes from a keyword heuristic
+    that hasn't really read the application. Letting it decide would email a
+    rejection because of an outage or a spent token quota — so everything is
+    held for manual review instead.
+    """
+    monkeypatch.setattr(application_service.llm, "is_enabled", lambda: True)
+    _patch_graph(monkeypatch, ai_available=False, candidate_score=8)
+
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+
+    assert result["status"] == "pending"           # not rejected
+    assert "manual review" in result["report"].lower()
+
+
+def test_ai_outage_does_not_produce_a_contract(monkeypatch):
+    monkeypatch.setattr(application_service.llm, "is_enabled", lambda: True)
+    _patch_graph(monkeypatch, ai_available=False, candidate_score=95)
+
+    created = client.post("/applications/", json={
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    }).json()
+
+    assert created["status"] == "pending"          # not interview
+    assert created["contract_task_id"] is None
 
 
 def test_health():

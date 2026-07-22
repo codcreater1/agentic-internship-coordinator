@@ -122,6 +122,10 @@ async def analyze_cv(
         report=result["report"],
         email_subject=result["email_subject"],
         email_body=result["email_body"],
+        company_name=result["company_name"],
+        supervisor_name=result["supervisor_name"],
+        supervisor_contact=result["supervisor_contact"],
+        missing_fields=result.get("missing_fields", []),
         contract_task_id=contract_task_id,
         signed_contract_download_url=None,
     )
@@ -152,6 +156,10 @@ async def analyze_cv_text(request: CVTextRequest):
         report=result["report"],
         email_subject=result["email_subject"],
         email_body=result["email_body"],
+        company_name=result["company_name"],
+        supervisor_name=result["supervisor_name"],
+        supervisor_contact=result["supervisor_contact"],
+        missing_fields=result.get("missing_fields", []),
         contract_task_id=contract_task_id,
         signed_contract_download_url=None,
     )

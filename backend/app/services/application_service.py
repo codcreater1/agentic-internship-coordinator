@@ -71,6 +71,24 @@ class ApplicationService:
         if status == "interview" and missing_fields:
             status = "request_clarification"
 
+        # AI configured but the call failed — an outage, or the daily token
+        # quota spent mid-day. The score then comes from a keyword heuristic
+        # that has not read the application in any meaningful sense, and
+        # letting it decide would email a rejection because of an
+        # infrastructure problem. Hold for human review instead: no rejection,
+        # no interview, no contract.
+        #
+        # A deployment deliberately running without a key is a different case:
+        # the operator chose keyword screening, so it keeps deciding as before.
+        ai_broken = llm.is_enabled() and result.get("ai_available") is False
+        if ai_broken:
+            status = "pending"
+            report = (
+                f"{report}\n\nAI evaluation was unavailable for this application, "
+                "so no automatic decision was made. It is queued for manual "
+                "review by the coordinator."
+            ).strip()
+
         email_subject, email_body = ApplicationService._build_email(
             status=status,
             score=score,
