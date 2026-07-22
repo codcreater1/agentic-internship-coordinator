@@ -26,6 +26,7 @@ A candidate emails their CV → the system evaluates it end-to-end and replies a
 - 🧠 **LLM agent evaluation** — LangGraph workflow scores 0–100, extracts strengths/weaknesses, recommends the best-fit internship role
 - ✉️ **Personalised emails** — AI-drafted interview / clarification-request / under-review / rejection messages (with safe static-template fallback)
 - 🔒 **Mandatory-field gate** — an agreement names a host organisation and a workplace supervisor, so an application that omits them is held at **`request_clarification`** and the candidate is asked for exactly what is missing. An incomplete application can never reach contract generation — and is never rejected for an omission it can fix
+- 🧯 **Degrades safely** — if the model is unreachable (outage, spent token quota) the application is queued for manual review rather than judged by the keyword fallback, so infrastructure trouble never turns into a rejection email
 - 📝 **Official contract generation** — produces the UTA *Appendix No. 3* internship agreement, signed electronically in the dashboard (canvas signature pad → embedded in the PDF)
 - 📊 **Recruiter dashboard** — React UI with live candidate inbox, evaluation detail, and contract signing
 - 🔭 **LLM observability** — every model call traced in LangFuse (latency, tokens, prompt, output)
@@ -55,7 +56,10 @@ flowchart TD
     C --> D[FastAPI backend]
     D --> E[LangGraph agent workflow]
     E --> F[LLM evaluation - Groq llama-3.3-70b]
-    F --> G[Score + role + placement details]
+    F --> T{Model reachable?}
+    T -->|No| U[Pending — queued for<br/>manual review]
+    U --> L[AI-drafted email reply]
+    T -->|Yes| G[Score + role + placement details]
     G --> H{Eligible placement?}
     H -->|Outside EU/EEA| K[Rejected]
     H -->|Yes| Q{Score}
@@ -64,7 +68,7 @@ flowchart TD
     Q -->|< 50| K
     R -->|Yes| I[Interview + generate UTA contract]
     R -->|Missing| S[Needs info — ask candidate,<br/>no contract issued]
-    I --> L[AI-drafted email reply]
+    I --> L
     J --> L
     K --> L
     S --> L
@@ -147,9 +151,15 @@ The agreement is a legal document, so the paths that produce or move one are con
 | The signature lands on the intended candidate | Candidates addressed by stable `id`, never by list position |
 | Uploads can't exhaust memory or smuggle a format | Size cap (`max_pdf_bytes`), magic-byte identification — the filename extension is never trusted — and a malformed PDF returns `415`, not a `500` |
 | Signed contracts aren't world-readable | HMAC download tokens, 10-minute TTL, task-id bound |
+| An outage never rejects anybody | If the model is configured but failing, the keyword score is not allowed to decide: the application is held as `pending` for manual review — no rejection email, no contract |
+| Malformed input answers, never crashes | Every endpoint swept with empty, truncated, oversized, non-PDF, null-byte, emoji/RTL, bad-JSON, unknown-id, forged-token, traversal and injection input — 38 probes, no `5xx` |
 
 **The LLM never decides these.** It extracts and scores; the gates are ordinary
-code, so a manipulated document cannot talk its way past them.
+code, so a manipulated document cannot talk its way past them — and neither can
+an unavailable one.
+
+Ids reach SQLite only as bound parameters, so injection attempts are inert and
+leave the table intact.
 
 ---
 
@@ -206,15 +216,34 @@ A root `Dockerfile` builds the backend; `docker-compose.yaml` runs backend + fro
 
 ```bash
 cd backend
-pytest                 # 22 hermetic, offline tests — no network, temp DB
+pytest                 # 26 hermetic, offline tests — no network, temp DB
 ```
 
 Covers the decision thresholds, the EU-eligibility and mandatory-field gates,
 both contract entry points, id-based addressing under a shifting list, upload
-validation, and the signing/download regressions. Each was written against the
-defect it guards, and checked to fail without its fix.
+validation, outage handling, injection and out-of-range input, and the
+signing/download regressions. Each was written against the defect it guards,
+and checked to fail without its fix.
 
-Plus the 100-document prompt-injection / category corpus under `ata-test-docs/` for end-to-end evaluation.
+### End-to-end corpus
+
+`ata-test-docs/` generates 100 text-selectable recreations of the UTA form
+across seven categories, each with the outcome it should produce:
+
+```bash
+cd ata-test-docs
+python tool/generate.py                    # documents/ + MANIFEST.csv (not committed)
+python tool/benchmark.py --per-category 2  # score a running backend against them
+```
+
+The benchmark compares each returned status against its category's expected
+outcome. It also recognises the keyword fallback — a multiple-of-8 score with
+no AI report — and marks those runs **SKIPPED** rather than counting them, so a
+spent LLM quota cannot be mistaken for a regression.
+
+> ⚠️ Groq's free tier allows **100k tokens per day** and each document costs
+> roughly 2k, so a full 100-document sweep does not fit. Keep `--per-category`
+> small, or target specific files with `--files`.
 
 ---
 
