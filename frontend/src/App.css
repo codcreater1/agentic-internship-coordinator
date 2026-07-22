@@ -371,6 +371,33 @@
 .stamp.pending { color: var(--warn); background: var(--warn-bg); }
 .stamp.rejected { color: var(--bad); background: var(--bad-bg); }
 .stamp.signed { color: var(--accent); background: var(--accent-bg); }
+/* Held for missing mandatory details — paused, not refused, so it shares the
+   warning colour rather than the rejection red. */
+.stamp.request_clarification { color: var(--warn); background: var(--warn-bg); }
+
+/* ------------------- Blocked-on-candidate notice ------------------ */
+.blockedNotice {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--warn);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.blockedNotice h4 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.blockedNotice p {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
 
 /* ---------------------------- Queue tabs -------------------------- */
 .queueTabs {

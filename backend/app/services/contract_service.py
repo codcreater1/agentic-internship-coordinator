@@ -36,8 +36,31 @@ class ContractService:
         email: str,
         recommended_role: str,
         candidate_score: int,
+        company_name: str,
+        supervisor_name: str,
+        supervisor_contact: str,
         output_path: Path,
     ) -> Path:
+        # Last line of defence before a signable document exists. The caller
+        # already refuses to reach this point with an incomplete application;
+        # rendering a blank host organisation or supervisor onto an agreement
+        # the coordinator then signs would be worse than failing loudly.
+        blank = [
+            label
+            for label, value in (
+                ("student name", name),
+                ("host organisation", company_name),
+                ("workplace supervisor", supervisor_name),
+                ("supervisor contact", supervisor_contact),
+            )
+            if not (value or "").strip()
+        ]
+        if blank:
+            raise ValueError(
+                "Cannot generate an internship agreement without: "
+                + ", ".join(blank)
+            )
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         c = canvas.Canvas(str(output_path), pagesize=A4)
@@ -82,6 +105,9 @@ class ContractService:
 
         field("Student's name and surname:", name)
         field("Contact e-mail:", email)
+        field("Host organisation:", company_name)
+        field("Workplace supervisor:", supervisor_name)
+        field("Supervisor contact:", supervisor_contact)
         field("Recommended role:", recommended_role)
         field("Evaluation score:", f"{candidate_score}/100")
         field("Date:", date.today().isoformat())

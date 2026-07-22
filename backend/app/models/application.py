@@ -45,6 +45,13 @@ class ApplicationResponse(BaseModel):
     report: str
     email_subject: str
     email_body: str
+    # Placement details required before an agreement can be issued. When
+    # `missing_fields` is non-empty the application is held at
+    # `request_clarification` and no contract exists.
+    company_name: str = ""
+    supervisor_name: str = ""
+    supervisor_contact: str = ""
+    missing_fields: list[str] = Field(default_factory=list)
     contract_pdf_path: str | None = None
     signed_contract_path: str | None = None
     contract_task_id: str | None = None

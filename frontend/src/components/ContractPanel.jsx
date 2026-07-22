@@ -163,7 +163,11 @@ export default function ContractPanel({ selected, refresh }) {
         <div className="empty">
           <FileText size={36} />
           <p>No contract generated.</p>
-          <small>Only candidates invited to interview receive an agreement.</small>
+          <small>
+            {selected?.missing_fields?.length > 0
+              ? "The application is missing mandatory placement details — the candidate has been asked for them."
+              : "Only candidates invited to interview receive an agreement."}
+          </small>
         </div>
       )}
 

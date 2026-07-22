@@ -28,10 +28,20 @@ def create_unsigned_contract(name: str, email: str, result: dict) -> str:
         email=email,
         recommended_role=result["recommended_role"],
         candidate_score=result["candidate_score"],
+        company_name=result["company_name"],
+        supervisor_name=result["supervisor_name"],
+        supervisor_contact=result["supervisor_contact"],
         output_path=task_dir / "original.pdf",
     )
 
     return contract_task_id
+
+
+def should_generate_contract(result: dict) -> bool:
+    """An agreement is only issued for an interview decision whose application
+    states every mandatory placement detail. Missing details hold the candidate
+    at `request_clarification` instead — see ApplicationService."""
+    return result["status"] == "interview" and not result.get("missing_fields")
 
 
 def _persist_application(name, email, result, contract_task_id):
@@ -53,6 +63,10 @@ def _persist_application(name, email, result, contract_task_id):
             report=result["report"],
             email_subject=result["email_subject"],
             email_body=result["email_body"],
+            company_name=result["company_name"],
+            supervisor_name=result["supervisor_name"],
+            supervisor_contact=result["supervisor_contact"],
+            missing_fields=result.get("missing_fields", []),
             contract_pdf_path=contract_pdf_path,
             signed_contract_path=None,
             contract_task_id=contract_task_id,
@@ -85,7 +99,7 @@ async def analyze_cv(
     resolved_name = result.get("extracted_name") or name
 
     contract_task_id = None
-    if result["status"] == "interview":
+    if should_generate_contract(result):
         contract_task_id = create_unsigned_contract(name=resolved_name, email=email, result=result)
         result["email_body"] += _AWAITING_SIGNATURE_NOTE
 
@@ -113,7 +127,7 @@ async def analyze_cv_text(request: CVTextRequest):
     resolved_name = result.get("extracted_name") or request.name
 
     contract_task_id = None
-    if result["status"] == "interview":
+    if should_generate_contract(result):
         contract_task_id = create_unsigned_contract(
             name=resolved_name, email=request.email, result=result
         )

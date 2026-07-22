@@ -26,11 +26,17 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 def process_application(application: Application) -> ApplicationResponse:
     result = ApplicationService.evaluate(application.cv_text, candidate_name=application.name)
     resolved_name = result.get("extracted_name") or application.name
+    missing_fields = result.get("missing_fields", [])
 
     contract_pdf_path = None
     contract_task_id = None
 
-    if result["status"] == "interview":
+    # Only an application that reached `interview` gets an agreement, and the
+    # evaluation can only return `interview` once every mandatory placement
+    # field is present. The second half of that condition is asserted here too:
+    # the contract is the one artefact that must never be produced from an
+    # incomplete application, so it does not rely on the status alone.
+    if result["status"] == "interview" and not missing_fields:
         contract_task_id, task_dir = storage_service.create_task()
 
         original_contract_path = task_dir / "original.pdf"
@@ -40,6 +46,9 @@ def process_application(application: Application) -> ApplicationResponse:
             email=application.email,
             recommended_role=result["recommended_role"],
             candidate_score=result["candidate_score"],
+            company_name=result["company_name"],
+            supervisor_name=result["supervisor_name"],
+            supervisor_contact=result["supervisor_contact"],
             output_path=original_contract_path,
         )
 
@@ -59,6 +68,10 @@ def process_application(application: Application) -> ApplicationResponse:
         report=result["report"],
         email_subject=result["email_subject"],
         email_body=result["email_body"],
+        company_name=result["company_name"],
+        supervisor_name=result["supervisor_name"],
+        supervisor_contact=result["supervisor_contact"],
+        missing_fields=missing_fields,
         contract_pdf_path=contract_pdf_path,
         signed_contract_path=None,
         contract_task_id=contract_task_id,

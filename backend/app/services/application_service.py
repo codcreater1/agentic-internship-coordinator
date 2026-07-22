@@ -1,9 +1,9 @@
 """Application evaluation service.
 
 Runs the LangGraph workflow (CV analysis → matching → report), turns the score
-into a decision (interview / pending / rejected), and drafts a candidate-facing
-email. The email is personalized by Claude when available, with static
-templates as a fallback.
+into a decision (interview / request_clarification / pending / rejected), and
+drafts a candidate-facing email. The email is personalized by Claude when
+available, with static templates as a fallback.
 """
 
 from app.agents.workflow import graph
@@ -13,6 +13,17 @@ from app.core.config import settings
 # Score thresholds for the hiring decision.
 INTERVIEW_THRESHOLD = 70
 PENDING_THRESHOLD = 50
+
+# The internship agreement is a legal document that names a host organisation
+# and the workplace supervisor who signs off on the placement. It must never be
+# generated from an application that does not state them, so an otherwise
+# interview-worthy candidate is held at `request_clarification` until the
+# details arrive. Values are the phrasing used when asking the candidate.
+REQUIRED_CONTRACT_FIELDS = {
+    "company_name": "the name of the host company or organisation",
+    "supervisor_name": "the full name of your workplace internship supervisor",
+    "supervisor_contact": "an email address or phone number for that supervisor",
+}
 
 
 class ApplicationService:
@@ -46,6 +57,20 @@ class ApplicationService:
                 "not meet the internship eligibility requirements."
             )
 
+        # Mandatory-field gate: the agreement cannot be issued without the
+        # placement details, so hold the application for clarification instead
+        # of letting the workflow reach contract generation. Runs after the
+        # eligibility gate so an ineligible placement stays rejected — there is
+        # no point asking for a supervisor we will never contract with.
+        placement = {
+            field: (result.get(field) or "").strip()
+            for field in REQUIRED_CONTRACT_FIELDS
+        }
+        missing_fields = [field for field, value in placement.items() if not value]
+
+        if status == "interview" and missing_fields:
+            status = "request_clarification"
+
         email_subject, email_body = ApplicationService._build_email(
             status=status,
             score=score,
@@ -53,10 +78,19 @@ class ApplicationService:
             strengths=result.get("strengths", []),
             weaknesses=result.get("weaknesses", []),
             ineligible_reason=ineligible_reason,
+            missing_fields=missing_fields,
         )
 
         if ineligible_reason:
             report = f"{report}\n\nEligibility: {ineligible_reason}".strip()
+
+        if status == "request_clarification":
+            wanted = ", ".join(REQUIRED_CONTRACT_FIELDS[f] for f in missing_fields)
+            report = (
+                f"{report}\n\nHeld for clarification: the application does not state "
+                f"{wanted}. The internship agreement cannot be generated until these "
+                "are provided."
+            ).strip()
 
         return {
             "extracted_name": extracted_name,
@@ -66,6 +100,8 @@ class ApplicationService:
             "report": report,
             "email_subject": email_subject,
             "email_body": email_body,
+            "missing_fields": missing_fields,
+            **placement,
         }
 
     # ------------------------------------------------------------------ #
@@ -74,7 +110,7 @@ class ApplicationService:
 
     @staticmethod
     def _build_email(*, status, score, recommended_role, strengths, weaknesses,
-                     ineligible_reason=""):
+                     ineligible_reason="", missing_fields=()):
         ai = ApplicationService._ai_email(
             status=status,
             score=score,
@@ -82,19 +118,29 @@ class ApplicationService:
             strengths=strengths,
             weaknesses=weaknesses,
             ineligible_reason=ineligible_reason,
+            missing_fields=missing_fields,
         )
         if ai is not None:
             return ai["subject"], ai["body"]
+
+        if status == "request_clarification":
+            return _clarification_template(missing_fields)
 
         return _TEMPLATE_EMAILS[status]
 
     @staticmethod
     def _ai_email(*, status, score, recommended_role, strengths, weaknesses,
-                  ineligible_reason=""):
+                  ineligible_reason="", missing_fields=()):
         intent = {
             "interview": "invite the candidate to the next interview stage",
             "pending": "tell the candidate their application is under review",
             "rejected": "politely decline the candidate's application",
+            "request_clarification": (
+                "ask the candidate for the missing placement details listed below "
+                "so the internship agreement can be prepared; make clear the "
+                "application looks promising and is only paused, not refused, and "
+                "ask them to reply with the details"
+            ),
         }[status]
         if ineligible_reason:
             intent = (
@@ -121,6 +167,13 @@ class ApplicationService:
                 f"Score: {score}/100\n"
                 f"Recommended role: {recommended_role}\n"
                 + (f"Ineligibility reason: {ineligible_reason}\n" if ineligible_reason else "")
+                + (
+                    "Missing details the candidate must supply: "
+                    + "; ".join(REQUIRED_CONTRACT_FIELDS[f] for f in missing_fields)
+                    + "\n"
+                    if missing_fields
+                    else ""
+                )
                 + "<APPLICANT_DETAILS>\n"
                 f"Strengths: {', '.join(strengths) or 'n/a'}\n"
                 f"Weaknesses: {', '.join(weaknesses) or 'n/a'}\n"
@@ -144,6 +197,25 @@ _EMAIL_SCHEMA = {
     },
     "required": ["subject", "body"],
 }
+
+
+def _clarification_template(missing_fields):
+    """Offline fallback: name each missing detail so the candidate can reply."""
+    bullets = "\n".join(
+        f"  - {REQUIRED_CONTRACT_FIELDS[field]}" for field in missing_fields
+    )
+    return (
+        "Internship Application - Additional Details Needed",
+        "Dear Candidate,\n\n"
+        "Thank you for your internship application. Your profile looks promising, "
+        "but before we can prepare your internship agreement we still need the "
+        "following:\n\n"
+        f"{bullets}\n\n"
+        "Please reply to this email with these details and we will continue "
+        "processing your application.\n\n"
+        "Best regards,\n"
+        "Internship Coordination Team",
+    )
 
 
 _TEMPLATE_EMAILS = {

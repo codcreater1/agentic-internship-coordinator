@@ -1,5 +1,6 @@
-import { Brain, Download, Inbox, Sparkles } from "lucide-react";
+import { AlertCircle, Brain, Download, Inbox, Sparkles } from "lucide-react";
 import { signedDownloadUrl } from "../services/api";
+import { MISSING_FIELD_LABELS, statusLabel } from "../services/status";
 
 function initials(name = "") {
   return name.split(" ").filter(Boolean).map((x) => x[0]).join("").slice(0, 2).toUpperCase();
@@ -7,6 +8,12 @@ function initials(name = "") {
 
 function statusClass(status = "") {
   return status.toLowerCase();
+}
+
+const listFormatter = new Intl.ListFormat("en", { style: "long", type: "conjunction" });
+
+function formatList(items) {
+  return listFormatter.format(items);
 }
 
 export default function CandidateDetails({ selected }) {
@@ -41,9 +48,25 @@ export default function CandidateDetails({ selected }) {
 
         <span className={`stamp ${statusClass(selected.status)}`}>
           <span className="stampDot" />
-          {selected.status}
+          {statusLabel(selected.status)}
         </span>
       </div>
+
+      {selected.missing_fields?.length > 0 && (
+        <div className="blockedNotice">
+          <AlertCircle size={17} />
+          <div>
+            <h4>Waiting on the candidate</h4>
+            <p>
+              No agreement can be issued until the application states{" "}
+              {formatList(
+                selected.missing_fields.map((f) => MISSING_FIELD_LABELS[f] || f)
+              )}
+              . The request has been sent by email.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="scoreHero">
         <div className="gauge">

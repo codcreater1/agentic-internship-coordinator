@@ -19,6 +19,10 @@ class CandidateState(TypedDict):
     report: str
     internship_country: str
     internship_eu_eligible: str
+    # Placement details the internship agreement cannot be issued without.
+    company_name: str
+    supervisor_name: str
+    supervisor_contact: str
 
 
 builder = StateGraph(CandidateState)

@@ -1,6 +1,7 @@
 """End-to-end API smoke tests (offline fallback mode — see conftest.py)."""
 
 import io
+from pathlib import Path
 
 import fitz
 from fastapi.testclient import TestClient
@@ -23,6 +24,11 @@ def _fake_graph_result(**overrides):
         "weaknesses": [],
         "internship_country": "",
         "internship_eu_eligible": "unknown",
+        # A complete application by default; tests that exercise the
+        # mandatory-field gate blank these out explicitly.
+        "company_name": "Acme GmbH",
+        "supervisor_name": "Grace Hopper",
+        "supervisor_contact": "grace@acme.example",
     }
     base.update(overrides)
     return base
@@ -62,6 +68,115 @@ def test_unknown_placement_does_not_block(monkeypatch):
     assert ApplicationService.evaluate("cv", candidate_name="Ada")["status"] == "interview"
 
 
+def _patch_graph(monkeypatch, **overrides):
+    monkeypatch.setattr(
+        application_service, "graph",
+        type("G", (), {"invoke": staticmethod(
+            lambda _s: _fake_graph_result(**overrides))})(),
+    )
+
+
+def test_missing_supervisor_holds_application_for_clarification(monkeypatch):
+    """Mandatory-field gate: an interview-worthy candidate whose application
+    does not name a workplace supervisor must be held for clarification, not
+    advanced to interview — the agreement names that supervisor."""
+    _patch_graph(monkeypatch, supervisor_name="", supervisor_contact="")
+
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+
+    assert result["candidate_score"] == 85          # merit is unaffected
+    assert result["status"] == "request_clarification"
+    assert result["missing_fields"] == ["supervisor_name", "supervisor_contact"]
+
+
+def test_clarification_email_names_every_missing_detail(monkeypatch):
+    """The candidate can only fix what they are told about."""
+    _patch_graph(monkeypatch, company_name="", supervisor_name="")
+
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+    body = result["email_body"].lower()
+
+    assert "host company" in body or "organisation" in body
+    assert "supervisor" in body
+
+
+def test_no_contract_when_placement_details_are_missing(monkeypatch):
+    """End-to-end regression for the reported defect: the workflow used to run
+    on to contract generation even with mandatory fields empty. A held
+    application must reach the dashboard with no agreement attached."""
+    _patch_graph(monkeypatch, supervisor_name="", supervisor_contact="")
+
+    created = client.post("/applications/", json={
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    }).json()
+
+    assert created["status"] == "request_clarification"
+    assert created["contract_pdf_path"] is None
+    assert created["contract_task_id"] is None
+    assert "supervisor_name" in created["missing_fields"]
+
+
+def test_contract_is_generated_for_a_complete_application(monkeypatch):
+    """The gate must not block a complete application."""
+    _patch_graph(monkeypatch)
+
+    created = client.post("/applications/", json={
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    }).json()
+
+    assert created["status"] == "interview"
+    assert created["contract_task_id"]
+    assert created["missing_fields"] == []
+    assert Path(created["contract_pdf_path"]).is_file()
+
+
+def test_web_upload_panel_also_refuses_incomplete_applications(monkeypatch):
+    """/cv/analyze-text is the second contract entry point (the upload panel);
+    it must enforce the same gate as the email/n8n route."""
+    _patch_graph(monkeypatch, company_name="")
+
+    data = client.post("/cv/analyze-text", json={
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    }).json()
+
+    assert data["status"] == "request_clarification"
+    assert data["contract_task_id"] is None
+
+
+def test_contract_service_refuses_to_render_without_supervisor(tmp_path):
+    """Defence in depth: even called directly, the agreement cannot be produced
+    with a blank supervisor — a signable document with missing parties is worse
+    than a loud failure."""
+    import pytest
+
+    from app.services.contract_service import ContractService
+
+    with pytest.raises(ValueError, match="workplace supervisor"):
+        ContractService.create_contract_pdf(
+            name="Ada Lovelace", email="ada@example.com",
+            recommended_role="Backend Developer Internship",
+            candidate_score=85,
+            company_name="Acme GmbH", supervisor_name="", supervisor_contact="x@y.z",
+            output_path=tmp_path / "contract.pdf",
+        )
+
+
+def test_ineligible_placement_stays_rejected_not_clarification(monkeypatch):
+    """Gate ordering: a non-EU placement is refused outright — we do not ask a
+    candidate for a supervisor we would never contract with."""
+    _patch_graph(monkeypatch, internship_country="Turkey",
+                 internship_eu_eligible="non_eu",
+                 supervisor_name="", supervisor_contact="")
+
+    assert ApplicationService.evaluate("cv")["status"] == "rejected"
+
+
 def test_health():
     body = client.get("/health").json()
     assert body["status"] == "healthy"
@@ -79,7 +194,9 @@ def test_analyze_text_returns_score():
     assert r.status_code == 200
     data = r.json()
     assert 0 <= data["candidate_score"] <= 100
-    assert data["status"] in {"interview", "pending", "rejected"}
+    assert data["status"] in {
+        "interview", "pending", "rejected", "request_clarification",
+    }
     assert data["email_subject"] and data["email_body"]
 
 
@@ -206,7 +323,10 @@ def test_signature_date_is_stamped_at_signing_not_generation(tmp_path):
     ContractService.create_contract_pdf(
         name="Ada Lovelace", email="ada@example.com",
         recommended_role="Backend Developer Internship",
-        candidate_score=80, output_path=unsigned,
+        candidate_score=80,
+        company_name="Acme GmbH", supervisor_name="Grace Hopper",
+        supervisor_contact="grace@acme.example",
+        output_path=unsigned,
     )
 
     today = datetime.now(timezone.utc).date().isoformat()

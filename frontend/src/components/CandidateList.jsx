@@ -1,4 +1,5 @@
 import { Inbox } from "lucide-react";
+import { statusLabel } from "../services/status";
 
 function initials(name = "") {
   return name.split(" ").filter(Boolean).map((x) => x[0]).join("").slice(0, 2).toUpperCase();
@@ -100,7 +101,7 @@ export default function CandidateList({
                 <span className="scorePill">{app.candidate_score}</span>
                 <span className={`stamp ${signed ? "signed" : statusClass(app.status)}`}>
                   <span className="stampDot" />
-                  {signed ? "signed" : app.status}
+                  {signed ? "signed" : statusLabel(app.status)}
                 </span>
               </div>
             </button>
