@@ -336,6 +336,24 @@ def test_missing_application_returns_404():
     assert client.get("/applications/9999").status_code == 404
 
 
+def test_out_of_range_index_is_404_not_500():
+    """SQLite binds parameters as 64-bit integers, so an index beyond that
+    raised OverflowError inside the query and surfaced as a server error — the
+    kind of thing a tester finds by typing a long number into the URL."""
+    for index in (2**63, 2**64, int("9" * 40)):
+        assert client.get(f"/applications/{index}").status_code == 404
+
+
+def test_sql_injection_in_application_id_is_inert():
+    """Ids reach SQLite as bound parameters, never as concatenated SQL."""
+    before = len(client.get("/applications/").json())
+
+    for payload in ("' OR '1'='1", "x'; DROP TABLE applications;--"):
+        assert client.delete(f"/applications/by-id/{payload}").status_code == 404
+
+    assert len(client.get("/applications/").json()) == before
+
+
 def _upload_and_sign() -> str:
     """Upload a blank PDF, sign it, and return the download URL."""
     doc = fitz.open()

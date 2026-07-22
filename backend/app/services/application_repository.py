@@ -70,9 +70,14 @@ def list_all() -> list[ApplicationResponse]:
     return [ApplicationResponse.model_validate_json(row["data"]) for row in rows]
 
 
+# SQLite binds parameters as 64-bit integers; anything larger raises
+# OverflowError instead of simply not matching, which would surface as a 500.
+_SQLITE_MAX_INT = 2**63 - 1
+
+
 def get_by_index(index: int) -> ApplicationResponse | None:
     """Position in the newest-first list — preserves the legacy index-based API."""
-    if index < 0:
+    if index < 0 or index > _SQLITE_MAX_INT:
         return None
     with _connect() as conn:
         row = conn.execute(
