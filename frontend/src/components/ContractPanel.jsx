@@ -125,7 +125,7 @@ export default function ContractPanel({ selected, refresh }) {
     setSigning(true);
     try {
       const dataUrl = canvasRef.current.toDataURL("image/png");
-      const updated = await signApplication(selected.originalIndex, dataUrl);
+      const updated = await signApplication(selected.id, dataUrl);
       await refresh();
       const url = signedDownloadUrl(updated?.signed_contract_download_url);
       if (url) window.open(url, "_blank");
@@ -140,7 +140,7 @@ export default function ContractPanel({ selected, refresh }) {
     setSendError("");
     setSending(true);
     try {
-      await sendContract(selected.originalIndex, { to, subject, body });
+      await sendContract(selected.id, { to, subject, body });
       await refresh();
       setComposeOpen(false);
     } catch (err) {
@@ -176,12 +176,12 @@ export default function ContractPanel({ selected, refresh }) {
           <iframe
             className="pdfFrame"
             title="Contract preview"
-            src={contractPreviewUrl(selected.originalIndex)}
+            src={contractPreviewUrl(selected.id)}
           />
 
           <a
             className="ghost block"
-            href={contractPreviewUrl(selected.originalIndex)}
+            href={contractPreviewUrl(selected.id)}
             target="_blank"
             rel="noreferrer"
           >

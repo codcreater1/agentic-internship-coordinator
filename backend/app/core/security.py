@@ -1,6 +1,4 @@
 import hmac
-import hashlib
-import time
 
 from fastapi import Header, HTTPException, status
 
@@ -18,28 +16,10 @@ def require_api_key(authorization: str | None = Header(default=None)) -> None:
     if not expected:
         return
 
-    if authorization != f"Bearer {expected}":
+    # Constant-time: a plain `!=` on a secret leaks its prefix through timing,
+    # and this key is guessable one character at a time without it.
+    if not hmac.compare_digest(authorization or "", f"Bearer {expected}"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid API key",
         )
-
-
-def verify_token(task_id: str, token: str) -> bool:
-    try:
-        exp, sig = token.split(":")
-        exp = int(exp)
-    except Exception:
-        return False
-
-    if time.time() > exp:
-        return False
-
-    data = f"{task_id}:{exp}"
-    expected = hmac.new(
-        settings.signing_secret.encode(),
-        data.encode(),
-        hashlib.sha256
-    ).hexdigest()
-
-    return hmac.compare_digest(sig, expected)

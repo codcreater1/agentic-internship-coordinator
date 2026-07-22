@@ -6,8 +6,12 @@ export async function getApplications() {
   return res.json();
 }
 
-export async function signApplication(index, signatureImageBase64) {
-  const res = await fetch(`${API_URL}/applications/${index}/sign`, {
+// Candidates are addressed by their stable id, never by list position: new
+// applications arrive from n8n continuously and the list is newest-first, so
+// an index captured at page load can point at a different candidate by the
+// time the coordinator signs.
+export async function signApplication(applicationId, signatureImageBase64) {
+  const res = await fetch(`${API_URL}/applications/by-id/${applicationId}/sign`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -23,8 +27,8 @@ export async function signApplication(index, signatureImageBase64) {
   return res.json();
 }
 
-export async function sendContract(index, { to, subject, body }) {
-  const res = await fetch(`${API_URL}/applications/${index}/send-contract`, {
+export async function sendContract(applicationId, { to, subject, body }) {
+  const res = await fetch(`${API_URL}/applications/by-id/${applicationId}/send-contract`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ to, subject, body }),
@@ -37,8 +41,8 @@ export async function sendContract(index, { to, subject, body }) {
   return res.json();
 }
 
-export function contractPreviewUrl(index) {
-  return `${API_URL}/applications/${index}/contract-preview`;
+export function contractPreviewUrl(applicationId) {
+  return `${API_URL}/applications/by-id/${applicationId}/contract-preview`;
 }
 
 export function signedDownloadUrl(path) {

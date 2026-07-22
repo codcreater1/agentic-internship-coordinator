@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from pydantic import BaseModel, EmailStr
 
+from app.core.exceptions import AppError
 from app.models.application import ApplicationResponse
 from app.models.cv import CVAnalysisResponse
 from app.services import application_repository as repo
@@ -87,13 +88,18 @@ async def analyze_cv(
     email: str = Form(...),
     file: UploadFile = File(...),
 ):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
-
-    cv_text = await CVPDFService.extract_text_from_pdf(file)
+    try:
+        cv_text = await CVPDFService.extract_text_from_pdf(file)
+    except AppError as err:
+        raise HTTPException(status_code=err.http_status, detail=err.detail)
 
     if not cv_text:
-        raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+        raise HTTPException(
+            status_code=400,
+            detail="No text could be extracted from this PDF. Scanned or "
+                   "image-only CVs are not supported — please upload a "
+                   "text-based PDF.",
+        )
 
     result = ApplicationService.evaluate(cv_text, candidate_name=name)
     resolved_name = result.get("extracted_name") or name

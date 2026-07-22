@@ -98,6 +98,22 @@ def create_application_from_n8n(application: Application):
     return repo.add(process_application(application))
 
 
+def _require_by_id(application_id: str) -> ApplicationResponse:
+    """Resolve an application by its stable id.
+
+    Everything that acts on a specific candidate addresses them this way. The
+    list position is not a safe handle: applications arrive continuously from
+    n8n and the list is ordered newest-first, so an index captured when the
+    dashboard loaded points at a different candidate as soon as one more
+    application lands. Signing or emailing the wrong person's agreement is
+    exactly the failure that must not be possible.
+    """
+    application = repo.get_by_id(application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return application
+
+
 @router.get("/{index}", response_model=ApplicationResponse)
 def get_application(index: int):
     application = repo.get_by_index(index)
@@ -113,11 +129,9 @@ def delete_application(application_id: str):
         raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.get("/{index}/contract-preview")
-def preview_contract(index: int):
-    application = repo.get_by_index(index)
-    if application is None:
-        raise HTTPException(status_code=404, detail="Application not found")
+@router.get("/by-id/{application_id}/contract-preview")
+def preview_contract(application_id: str):
+    application = _require_by_id(application_id)
 
     if not application.contract_pdf_path or not Path(application.contract_pdf_path).is_file():
         raise HTTPException(status_code=404, detail="Contract not available")
@@ -130,11 +144,9 @@ def preview_contract(index: int):
     )
 
 
-@router.post("/{index}/sign", response_model=ApplicationResponse)
-def sign_application(index: int, request: SignApplicationRequest):
-    application = repo.get_by_index(index)
-    if application is None:
-        raise HTTPException(status_code=404, detail="Application not found")
+@router.post("/by-id/{application_id}/sign", response_model=ApplicationResponse)
+def sign_application(application_id: str, request: SignApplicationRequest):
+    application = _require_by_id(application_id)
 
     if not application.contract_task_id or not application.contract_pdf_path:
         raise HTTPException(status_code=400, detail="Contract not generated")
@@ -187,12 +199,10 @@ def sign_application(index: int, request: SignApplicationRequest):
     return repo.update(application)
 
 
-@router.post("/{index}/send-contract", response_model=ApplicationResponse)
-def send_contract(index: int, request: SendContractRequest):
+@router.post("/by-id/{application_id}/send-contract", response_model=ApplicationResponse)
+def send_contract(application_id: str, request: SendContractRequest):
     """Email the signed contract to a coordinator-chosen recipient, via n8n."""
-    application = repo.get_by_index(index)
-    if application is None:
-        raise HTTPException(status_code=404, detail="Application not found")
+    application = _require_by_id(application_id)
 
     if not application.signed_contract_path:
         raise HTTPException(

@@ -1,5 +1,6 @@
 """End-to-end API smoke tests (offline fallback mode — see conftest.py)."""
 
+import base64
 import io
 from pathlib import Path
 
@@ -175,6 +176,88 @@ def test_ineligible_placement_stays_rejected_not_clarification(monkeypatch):
                  supervisor_name="", supervisor_contact="")
 
     assert ApplicationService.evaluate("cv")["status"] == "rejected"
+
+
+def test_signing_targets_the_candidate_not_the_list_position(monkeypatch):
+    """Regression: sign/preview/send used to address a candidate by their index
+    in the newest-first list. n8n inserts applications continuously, so an index
+    captured when the dashboard loaded points at a *different* candidate once
+    one more arrives — the coordinator's signature would land on the wrong
+    agreement. Addressing by id must be immune to that shift.
+    """
+    _patch_graph(monkeypatch)
+
+    target = client.post("/applications/", json={
+        "name": "First Candidate",
+        "email": "first@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    }).json()
+    assert target["contract_task_id"]          # has an agreement to sign
+
+    # A new application lands from n8n; `target` is no longer at index 0.
+    client.post("/applications/", json={
+        "name": "Later Candidate",
+        "email": "later@example.com",
+        "cv_text": "Python, FastAPI, Docker, PostgreSQL backend projects.",
+    })
+    assert client.get("/applications/0").json()["id"] != target["id"]
+
+    img = Image.new("RGBA", (40, 16), (0, 0, 0, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    signed = client.post(
+        f"/applications/by-id/{target['id']}/sign",
+        json={"signature_image_base64": base64.b64encode(buf.getvalue()).decode()},
+    )
+
+    assert signed.status_code == 200
+    body = signed.json()
+    assert body["id"] == target["id"]              # the intended candidate
+    assert body["email"] == "first@example.com"    # not the one that shifted in
+    assert body["signed_contract_download_url"]
+
+
+def test_unknown_application_id_is_404():
+    assert client.post(
+        "/applications/by-id/deadbeef/sign",
+        json={"signature_image_base64": "x"},
+    ).status_code == 404
+
+
+def test_cv_upload_rejects_a_non_pdf_disguised_by_filename():
+    """The filename extension is attacker-controlled; the magic bytes decide."""
+    fake = io.BytesIO(b"MZ\x90\x00 this is an executable, not a PDF")
+    r = client.post(
+        "/cv/analyze",
+        data={"name": "Ada", "email": "ada@example.com"},
+        files={"file": ("cv.pdf", fake, "application/pdf")},
+    )
+    assert r.status_code == 415                    # UNSUPPORTED_MEDIA_TYPE
+    assert "magic-byte" in r.json()["detail"].lower()
+
+
+def test_cv_upload_rejects_a_corrupt_pdf_with_400_not_500():
+    """A PDF header followed by garbage must not surface as a server error."""
+    broken = io.BytesIO(b"%PDF-1.7\nnot actually a pdf body")
+    r = client.post(
+        "/cv/analyze",
+        data={"name": "Ada", "email": "ada@example.com"},
+        files={"file": ("cv.pdf", broken, "application/pdf")},
+    )
+    assert r.status_code == 415, "must be a client error, never a 500"
+
+
+def test_cv_upload_rejects_an_oversized_file():
+    """Without a cap the whole upload is read into memory — a public OOM lever."""
+    from app.core.config import settings
+
+    oversized = io.BytesIO(b"%PDF-1.7\n" + b"A" * (settings.max_pdf_bytes + 1024))
+    r = client.post(
+        "/cv/analyze",
+        data={"name": "Ada", "email": "ada@example.com"},
+        files={"file": ("cv.pdf", oversized, "application/pdf")},
+    )
+    assert r.status_code == 413
 
 
 def test_health():
