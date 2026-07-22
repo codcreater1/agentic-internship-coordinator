@@ -2,7 +2,7 @@
 
 # 🤖 Agentic Internship Coordinator
 
-**An AI-powered internship-application screening system** — it reads a candidate's CV, evaluates it with an LLM agent workflow, decides interview / pending / reject, drafts a personalised email, and generates an official university internship agreement for the coordinator to sign.
+**An AI-powered internship-application screening system** — it reads a candidate's CV, evaluates it with an LLM agent workflow, decides interview / needs-info / pending / reject, drafts a personalised email, and generates an official university internship agreement for the coordinator to sign.
 
 Built for real use at the university (UTA – Akademia Techniczno-Artystyczna w Warszawie).
 
@@ -24,7 +24,8 @@ A candidate emails their CV → the system evaluates it end-to-end and replies a
 
 - 📄 **PDF CV ingestion** — via email (n8n Gmail trigger) or direct API/dashboard upload
 - 🧠 **LLM agent evaluation** — LangGraph workflow scores 0–100, extracts strengths/weaknesses, recommends the best-fit internship role
-- ✉️ **Personalised emails** — AI-drafted interview / under-review / rejection messages (with safe static-template fallback)
+- ✉️ **Personalised emails** — AI-drafted interview / clarification-request / under-review / rejection messages (with safe static-template fallback)
+- 🔒 **Mandatory-field gate** — an agreement names a host organisation and a workplace supervisor, so an application that omits them is held at **`request_clarification`** and the candidate is asked for exactly what is missing. An incomplete application can never reach contract generation — and is never rejected for an omission it can fix
 - 📝 **Official contract generation** — produces the UTA *Appendix No. 3* internship agreement, signed electronically in the dashboard (canvas signature pad → embedded in the PDF)
 - 📊 **Recruiter dashboard** — React UI with live candidate inbox, evaluation detail, and contract signing
 - 🔭 **LLM observability** — every model call traced in LangFuse (latency, tokens, prompt, output)
@@ -54,14 +55,19 @@ flowchart TD
     C --> D[FastAPI backend]
     D --> E[LangGraph agent workflow]
     E --> F[LLM evaluation - Groq llama-3.3-70b]
-    F --> G[Score + role + strengths/weaknesses]
-    G --> H{Decision}
-    H -->|>= 70| I[Interview + generate UTA contract]
-    H -->|50-69| J[Pending / under review]
-    H -->|< 50| K[Rejected]
+    F --> G[Score + role + placement details]
+    G --> H{Eligible placement?}
+    H -->|Outside EU/EEA| K[Rejected]
+    H -->|Yes| Q{Score}
+    Q -->|>= 70| R{Supervisor + host<br/>organisation stated?}
+    Q -->|50-69| J[Pending / under review]
+    Q -->|< 50| K
+    R -->|Yes| I[Interview + generate UTA contract]
+    R -->|Missing| S[Needs info — ask candidate,<br/>no contract issued]
     I --> L[AI-drafted email reply]
     J --> L
     K --> L
+    S --> L
     D --> M[(SQLite store)]
     M --> N[React dashboard]
     N --> O[Coordinator signs contract]
@@ -101,9 +107,20 @@ Base URL: `/` (no global prefix). Interactive docs at `/docs`.
 | `POST` | `/applications/` | Create + evaluate an application |
 | `POST` | `/applications/from-n8n` | Ingest from n8n (optional Bearer auth) |
 | `DELETE` | `/applications/by-id/{id}` | Delete an application |
-| `GET` | `/applications/{index}/contract-preview` | Inline PDF preview of the contract |
-| `POST` | `/applications/{index}/sign` | Embed the coordinator's signature |
+| `GET` | `/applications/by-id/{id}/contract-preview` | Inline PDF preview of the contract |
+| `POST` | `/applications/by-id/{id}/sign` | Embed the coordinator's signature |
+| `POST` | `/applications/by-id/{id}/send-contract` | Email the signed agreement to a chosen recipient |
 | `GET` | `/pdf/download/{task_id}` | Download a signed contract (token-gated) |
+
+> Anything acting on a specific candidate takes their stable **`id`**, never a list
+> position. Applications arrive from n8n continuously and the list is ordered
+> newest-first, so an index captured when the dashboard loaded would point at a
+> different candidate moments later — and the signature on an internship
+> agreement has to land on the right one.
+
+**Decision values** returned in `status`: `interview`, `request_clarification`
+(shown as *needs info* — mandatory placement details missing), `pending`,
+`rejected`. When `missing_fields` is non-empty no contract exists.
 
 ---
 
@@ -116,9 +133,23 @@ Because the evaluator is an LLM reading untrusted candidate documents, the pipel
 | Injections that manipulated the score | **7 / 10** | **0 / 10** |
 | Clean-document scores | baseline | unchanged |
 
-**Mitigations:** untrusted CV text is delimited (`<APPLICANT_DOCUMENT>`) and the model is instructed to treat it as data only, never as instructions, and to flag manipulation attempts as a weakness. Additional layers: optional Bearer-token auth on the n8n ingest endpoint, HMAC-signed download tokens, and signature-image normalisation (strips metadata, defangs polyglots).
+**Mitigations:** untrusted CV text is delimited (`<APPLICANT_DOCUMENT>`) and the model is instructed to treat it as data only, never as instructions, and to flag manipulation attempts as a weakness. Additional layers: optional Bearer-token auth on the n8n ingest endpoint (constant-time comparison), HMAC-signed download tokens, and signature-image normalisation (strips metadata, defangs polyglots).
 
 The 100-document test corpus used for this evaluation is generated by the tooling under `ata-test-docs/` (7 categories, each with an expected-outcome manifest).
+
+### Workflow integrity
+
+The agreement is a legal document, so the paths that produce or move one are constrained rather than trusted:
+
+| Guarantee | How |
+|---|---|
+| No contract from an incomplete application | Mandatory-field gate on every entry point (`/applications`, `/cv/analyze*`), plus a hard refusal inside the PDF renderer itself |
+| The signature lands on the intended candidate | Candidates addressed by stable `id`, never by list position |
+| Uploads can't exhaust memory or smuggle a format | Size cap (`max_pdf_bytes`), magic-byte identification — the filename extension is never trusted — and a malformed PDF returns `415`, not a `500` |
+| Signed contracts aren't world-readable | HMAC download tokens, 10-minute TTL, task-id bound |
+
+**The LLM never decides these.** It extracts and scores; the gates are ordinary
+code, so a manipulated document cannot talk its way past them.
 
 ---
 
@@ -175,8 +206,13 @@ A root `Dockerfile` builds the backend; `docker-compose.yaml` runs backend + fro
 
 ```bash
 cd backend
-pytest                 # hermetic, offline unit tests
+pytest                 # 22 hermetic, offline tests — no network, temp DB
 ```
+
+Covers the decision thresholds, the EU-eligibility and mandatory-field gates,
+both contract entry points, id-based addressing under a shifting list, upload
+validation, and the signing/download regressions. Each was written against the
+defect it guards, and checked to fail without its fix.
 
 Plus the 100-document prompt-injection / category corpus under `ata-test-docs/` for end-to-end evaluation.
 
