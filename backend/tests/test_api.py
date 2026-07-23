@@ -30,6 +30,9 @@ def _fake_graph_result(**overrides):
         "company_name": "Acme GmbH",
         "supervisor_name": "Grace Hopper",
         "supervisor_contact": "grace@acme.example",
+        "student_id": "s123456",
+        "internship_dates": "01.07.2026 - 31.08.2026",
+        "internship_duration": "8 weeks",
         "ai_available": True,
     }
     base.update(overrides)
@@ -89,6 +92,26 @@ def test_missing_supervisor_holds_application_for_clarification(monkeypatch):
     assert result["candidate_score"] == 85          # merit is unaffected
     assert result["status"] == "request_clarification"
     assert result["missing_fields"] == ["supervisor_name", "supervisor_contact"]
+
+
+def test_missing_student_id_holds_for_clarification(monkeypatch):
+    """The completeness gate covers the whole UTA form, not only the fields
+    printed on the agreement — a blank student ID is still incomplete."""
+    _patch_graph(monkeypatch, student_id="")
+
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+
+    assert result["status"] == "request_clarification"
+    assert result["missing_fields"] == ["student_id"]
+
+
+def test_missing_dates_or_duration_holds_for_clarification(monkeypatch):
+    _patch_graph(monkeypatch, internship_dates="", internship_duration="")
+
+    result = ApplicationService.evaluate("cv", candidate_name="Ada")
+
+    assert result["status"] == "request_clarification"
+    assert set(result["missing_fields"]) == {"internship_dates", "internship_duration"}
 
 
 def test_clarification_email_names_every_missing_detail(monkeypatch):

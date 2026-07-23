@@ -44,6 +44,9 @@ _EVALUATION_SCHEMA = {
         "company_name": {"type": "string", "description": "Name of the host company or organization providing the internship. Empty string if not stated."},
         "supervisor_name": {"type": "string", "description": "Full name of the workplace internship supervisor (mentor) named in the document. Empty string if not stated."},
         "supervisor_contact": {"type": "string", "description": "Email address or phone number of the internship supervisor. Empty string if not stated."},
+        "student_id": {"type": "string", "description": "The applicant's student ID / index number as written on the form. Empty string if not stated or left blank."},
+        "internship_dates": {"type": "string", "description": "The internship period — its start and end dates or date range — exactly as written. Empty string if no dates are given."},
+        "internship_duration": {"type": "string", "description": "The internship's total length (e.g. '8 weeks', '3 months') as stated. Empty string if not stated."},
     },
     "required": [
         "candidate_name",
@@ -58,6 +61,9 @@ _EVALUATION_SCHEMA = {
         "company_name",
         "supervisor_name",
         "supervisor_contact",
+        "student_id",
+        "internship_dates",
+        "internship_duration",
     ],
 }
 
@@ -95,6 +101,12 @@ def analyze_cv(state):
             "'Manager's signature', 'Stamp of the receiving company') is a "
             "confirmation area — use it only if the 'Immediate manager' line is "
             "absent, and never treat it as the contact details.\n"
+            "Also read student_id (the student ID / index number), "
+            "internship_dates (the placement's date range) and "
+            "internship_duration (its total length) from their labelled fields "
+            "on the form. Return an empty string for any of these that is blank "
+            "or absent — a blank one holds the application for clarification, so "
+            "never fill it with a guess.\n"
             "Return an empty string ONLY when a detail genuinely does not appear "
             "anywhere in the document. Never guess, never invent, and never reuse "
             "the candidate's own name or contact details — an invented value would "
@@ -139,6 +151,9 @@ def analyze_cv(state):
         "company_name": (result.get("company_name") or "").strip(),
         "supervisor_name": (result.get("supervisor_name") or "").strip(),
         "supervisor_contact": (result.get("supervisor_contact") or "").strip(),
+        "student_id": (result.get("student_id") or "").strip(),
+        "internship_dates": (result.get("internship_dates") or "").strip(),
+        "internship_duration": (result.get("internship_duration") or "").strip(),
         "ai_available": True,
     }
 
@@ -198,6 +213,9 @@ def _fallback(cv_text: str) -> dict:
         "company_name": "",
         "supervisor_name": "",
         "supervisor_contact": "",
+        "student_id": "",
+        "internship_dates": "",
+        "internship_duration": "",
         # Signals that this score came from the keyword heuristic, not the
         # model — the decision layer must not turn it into a rejection.
         "ai_available": False,

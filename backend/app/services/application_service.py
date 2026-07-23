@@ -14,16 +14,28 @@ from app.core.config import settings
 INTERVIEW_THRESHOLD = 70
 PENDING_THRESHOLD = 50
 
-# The internship agreement is a legal document that names a host organisation
-# and the workplace supervisor who signs off on the placement. It must never be
-# generated from an application that does not state them, so an otherwise
-# interview-worthy candidate is held at `request_clarification` until the
-# details arrive. Values are the phrasing used when asking the candidate.
-REQUIRED_CONTRACT_FIELDS = {
+# Fields a complete internship application must state. When any is missing, an
+# otherwise interview-worthy candidate is held at `request_clarification` and
+# asked for exactly what is absent, rather than advanced or rejected. Values
+# are the phrasing used when asking the candidate.
+#
+# The first three also appear on the signed agreement, so they are additionally
+# guarded inside the PDF renderer (see CONTRACT_CRITICAL_FIELDS); the rest are
+# required for a valid UTA submission but do not appear on the contract.
+REQUIRED_FIELDS = {
     "company_name": "the name of the host company or organisation",
     "supervisor_name": "the full name of your workplace internship supervisor",
     "supervisor_contact": "an email address or phone number for that supervisor",
+    "student_id": "your student ID number",
+    "internship_dates": "the start and end dates of the internship",
+    "internship_duration": "the total duration of the internship",
 }
+
+# The subset of REQUIRED_FIELDS that is printed on the agreement itself.
+CONTRACT_CRITICAL_FIELDS = ("company_name", "supervisor_name", "supervisor_contact")
+
+# Backwards-compatible alias — some call sites and tests import the old name.
+REQUIRED_CONTRACT_FIELDS = REQUIRED_FIELDS
 
 
 class ApplicationService:

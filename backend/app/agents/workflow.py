@@ -23,6 +23,10 @@ class CandidateState(TypedDict):
     company_name: str
     supervisor_name: str
     supervisor_contact: str
+    # Further fields a complete UTA submission must state (not on the contract).
+    student_id: str
+    internship_dates: str
+    internship_duration: str
     # False when the LLM was unreachable and the keyword fallback produced
     # the score — see ApplicationService.
     ai_available: bool

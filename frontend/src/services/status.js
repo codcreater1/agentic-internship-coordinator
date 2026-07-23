@@ -12,6 +12,9 @@ export const MISSING_FIELD_LABELS = {
   company_name: "the host organisation",
   supervisor_name: "the workplace supervisor",
   supervisor_contact: "the supervisor's contact details",
+  student_id: "the student ID number",
+  internship_dates: "the internship dates",
+  internship_duration: "the internship duration",
 };
 
 export function statusLabel(status = "") {
