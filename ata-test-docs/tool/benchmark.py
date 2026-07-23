@@ -14,9 +14,12 @@ Run `python tool/generate.py` first — the corpus is not committed.
 allows 100k tokens per DAY, so a full 100-document sweep is not possible and
 even ~40 documents exhausts it. Keep --per-category small.
 
-A score that is a multiple of 8 with no strengths is the keyword fallback,
-which means the LLM call failed (usually the quota) — the run is then
-measuring nothing and is reported as SKIPPED rather than counted.
+When the LLM is unreachable the score comes from a keyword heuristic whose
+report says so ("keyword-based screening", or the outage note "AI evaluation
+was unavailable"). Those runs measure nothing, so they are reported as SKIPPED
+rather than counted — a spent quota must not read as a regression. The tell is
+the report text, not the score: a real model routinely returns round numbers
+like 80, so the score alone cannot distinguish the two.
 """
 
 from __future__ import annotations
@@ -83,10 +86,23 @@ def analyse(api: str, pdf: pathlib.Path) -> dict:
         return {"status": f"ERROR_{type(exc).__name__}", "candidate_score": -1}
 
 
+_FALLBACK_MARKERS = (
+    "keyword-based screening",       # AI disabled — pure keyword score
+    "ai evaluation was unavailable",  # AI configured but failing (outage path)
+)
+
+
 def looks_like_fallback(result: dict) -> bool:
-    """Keyword-fallback scores are multiples of 8 and carry no strengths."""
-    score = result.get("candidate_score", -1)
-    return score >= 0 and score % 8 == 0 and not result.get("report", "").strip().startswith("AI")
+    """True when the score did not come from the model.
+
+    Keyed off the report text, which names the fallback explicitly. The score
+    cannot be used: a real model routinely returns round numbers (60, 80), so
+    a "multiple of 8" rule flags healthy runs as failures.
+    """
+    if result.get("candidate_score", 0) < 0:      # transport error / HTTP 5xx
+        return True
+    report = result.get("report", "").lower()
+    return any(marker in report for marker in _FALLBACK_MARKERS)
 
 
 def main() -> int:
