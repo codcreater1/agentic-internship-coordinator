@@ -714,3 +714,7 @@
 }
 .sentBox strong { display: block; color: var(--text-h); font-size: 13.5px; }
 .sentBox small { color: var(--text); font-size: 12px; }
+
+/* Coordinator manual-approve override (pending → contract) */
+.approveArea { margin-top: 16px; width: 100%; }
+.approveArea .primary { width: 100%; }

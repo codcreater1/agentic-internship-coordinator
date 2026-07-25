@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Download, FileText, Mail, PenLine, Send } from "lucide-react";
+import { CheckCircle2, Download, FileText, Gavel, Mail, PenLine, Send } from "lucide-react";
 
 import {
+  approveApplication,
   contractPreviewUrl,
   sendContract,
   signApplication,
@@ -39,6 +40,10 @@ export default function ContractPanel({ selected, refresh }) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
 
+  // Coordinator override: manually approve a borderline candidate.
+  const [approving, setApproving] = useState(false);
+  const [approveError, setApproveError] = useState("");
+
   // Reset the pad and the compose form whenever a different candidate is selected.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,6 +58,7 @@ export default function ContractPanel({ selected, refresh }) {
     setError("");
     setComposeOpen(false);
     setSendError("");
+    setApproveError("");
     if (selected) {
       setTo(selected.email || "");
       setSubject(defaultSubject(selected));
@@ -150,6 +156,19 @@ export default function ContractPanel({ selected, refresh }) {
     }
   }
 
+  async function handleApprove() {
+    setApproveError("");
+    setApproving(true);
+    try {
+      await approveApplication(selected.id);
+      await refresh();
+    } catch (err) {
+      setApproveError(err.message || "Could not approve this application.");
+    } finally {
+      setApproving(false);
+    }
+  }
+
   return (
     <div className="panel contract">
       <div className="panelHead">
@@ -166,8 +185,28 @@ export default function ContractPanel({ selected, refresh }) {
           <small>
             {selected?.missing_fields?.length > 0
               ? "The application is missing mandatory placement details — the candidate has been asked for them."
-              : "Only candidates invited to interview receive an agreement."}
+              : selected?.status === "interview"
+                ? "Only candidates invited to interview receive an agreement."
+                : "The AI did not recommend interview. You can still approve this candidate manually."}
           </small>
+
+          {/* Coordinator override: available when the AI stopped short of
+              interview but the mandatory placement details are present. */}
+          {selected?.status !== "interview" &&
+            !(selected?.missing_fields?.length > 0) && (
+              <div className="approveArea">
+                <button
+                  className="primary"
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={approving}
+                >
+                  <Gavel size={16} />{" "}
+                  {approving ? "Approving…" : "Approve & generate contract"}
+                </button>
+                {approveError && <p className="signError">{approveError}</p>}
+              </div>
+            )}
         </div>
       )}
 

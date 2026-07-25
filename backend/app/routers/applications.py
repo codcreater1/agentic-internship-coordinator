@@ -14,7 +14,10 @@ from app.models.application import (
 )
 from app.services import application_repository as repo
 from app.services import email_service
-from app.services.application_service import ApplicationService
+from app.services.application_service import (
+    CONTRACT_CRITICAL_FIELDS,
+    ApplicationService,
+)
 from app.services.contract_service import SIGNATURE_DATE_POS, ContractService
 from app.services.pdf_service import pdf_service
 from app.services.storage_service import storage_service
@@ -127,6 +130,50 @@ def get_application(index: int):
 def delete_application(application_id: str):
     if not repo.delete(application_id):
         raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.post("/by-id/{application_id}/approve", response_model=ApplicationResponse)
+def approve_application(application_id: str):
+    """Coordinator override: manually move a candidate to `interview` and issue
+    the contract, for a borderline case the AI left at `pending` (or
+    `request_clarification`). The coordinator's judgement outranks the score.
+
+    The mandatory-field gate still holds: a contract must name a host
+    organisation and workplace supervisor, so if those are missing the override
+    is refused with the specific gaps — approving cannot fabricate them.
+    """
+    application = _require_by_id(application_id)
+
+    if application.contract_task_id:
+        raise HTTPException(status_code=409, detail="Application already has a contract")
+
+    missing = [f for f in CONTRACT_CRITICAL_FIELDS if not getattr(application, f, "")]
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Cannot issue a contract — the application is missing: "
+                + ", ".join(f.replace("_", " ") for f in missing)
+            ),
+        )
+
+    task_id, task_dir = storage_service.create_task()
+    ContractService.create_contract_pdf(
+        name=application.name,
+        email=application.email,
+        recommended_role=application.recommended_role,
+        candidate_score=application.candidate_score,
+        company_name=application.company_name,
+        supervisor_name=application.supervisor_name,
+        supervisor_contact=application.supervisor_contact,
+        output_path=task_dir / "original.pdf",
+    )
+
+    application.status = "interview"
+    application.missing_fields = []
+    application.contract_task_id = task_id
+    application.contract_pdf_path = str(storage_service.original_path(task_id))
+    return repo.update(application)
 
 
 @router.get("/by-id/{application_id}/contract-preview")
