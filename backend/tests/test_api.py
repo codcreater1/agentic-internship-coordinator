@@ -501,3 +501,48 @@ def test_signature_date_is_stamped_at_signing_not_generation(tmp_path):
 
     signed_text = fitz.open(str(signed))[0].get_text()
     assert signed_text.count(today) == 2      # header + signing date
+
+
+def test_manual_approve_generates_contract_when_fields_present():
+    """Coordinator override: a borderline `pending` candidate whose placement
+    details are all present can be approved manually, which flips it to
+    `interview` and issues the contract."""
+    from app.models.application import ApplicationResponse
+    from app.services import application_repository as repo
+
+    app_in = ApplicationResponse(
+        name="Olga Volkova", email="olga@example.com", candidate_score=60,
+        recommended_role="Backend Developer Internship", status="pending",
+        report="borderline", email_subject="s", email_body="b",
+        company_name="Comarch S.A.", supervisor_name="Jan Kowalski",
+        supervisor_contact="jan@comarch.com",
+    )
+    repo.add(app_in)
+
+    r = client.post(f"/applications/by-id/{app_in.id}/approve")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "interview"
+    assert body["contract_task_id"]
+    # A second approve is a no-op conflict, not a duplicate contract.
+    assert client.post(f"/applications/by-id/{app_in.id}/approve").status_code == 409
+
+
+def test_manual_approve_refused_when_mandatory_field_missing():
+    """The mandatory-field gate is not bypassable: approving an application that
+    omits the supervisor is refused, since the contract could not name one."""
+    from app.models.application import ApplicationResponse
+    from app.services import application_repository as repo
+
+    app_in = ApplicationResponse(
+        name="No Supervisor", email="ns@example.com", candidate_score=60,
+        recommended_role="Backend Developer Internship",
+        status="request_clarification", report="r", email_subject="s", email_body="b",
+        company_name="Comarch S.A.", supervisor_name="", supervisor_contact="",
+        missing_fields=["supervisor_name", "supervisor_contact"],
+    )
+    repo.add(app_in)
+
+    r = client.post(f"/applications/by-id/{app_in.id}/approve")
+    assert r.status_code == 422
+    assert "supervisor" in r.json()["detail"].lower()

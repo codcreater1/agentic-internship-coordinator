@@ -41,6 +41,17 @@ export async function sendContract(applicationId, { to, subject, body }) {
   return res.json();
 }
 
+export async function approveApplication(applicationId) {
+  const res = await fetch(`${API_URL}/applications/by-id/${applicationId}/approve`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail || "Could not approve this application.");
+  }
+  return res.json();
+}
+
 export function contractPreviewUrl(applicationId) {
   return `${API_URL}/applications/by-id/${applicationId}/contract-preview`;
 }
