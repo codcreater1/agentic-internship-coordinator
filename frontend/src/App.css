@@ -718,3 +718,226 @@
 /* Coordinator manual-approve override (pending → contract) */
 .approveArea { margin-top: 16px; width: 100%; }
 .approveArea .primary { width: 100%; }
+
+/* ==================================================================== */
+/*  End-of-internship completion queue                                  */
+/* ==================================================================== */
+
+/* The nav items became real buttons when Inbox/Completions started
+   switching views. Strip the UA button chrome so they still read as the
+   spans they replaced. */
+.navItem {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+
+.navBadge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+
+/* Every check passed and the package is waiting for a signature — the same
+   green as `interview`, because both mean "cleared, act on it". */
+.stamp.approved { color: var(--ok); background: var(--ok-bg); }
+
+/* A row carrying items the coordinator or the student must act on. */
+.scorePill.warn { color: var(--warn); background: var(--warn-bg); }
+
+/* --------------------------- Status note --------------------------- */
+.statusNote {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 16px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+.statusNote p { margin: 0; font-size: 13.5px; line-height: 1.45; }
+
+/* ------------------------ Verified figures ------------------------- */
+.verifiedGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.verifiedGrid .miniPanel h3 { font-size: 19px; }
+.verifiedGrid .miniPanel small {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+@media (max-width: 1400px) {
+  .verifiedGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------------------------- Findings ----------------------------- */
+.findingGroup {
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  background: var(--code-bg);
+}
+.findingGroup.bad { border-color: var(--bad); background: var(--bad-bg); }
+.findingGroup.warn { border-color: var(--warn); background: var(--warn-bg); }
+.findingGroup.ok { border-color: var(--ok); background: var(--ok-bg); }
+
+.findingGroup h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-h);
+}
+.findingCount {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.findingNote {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.findingList { list-style: none; margin: 0; padding: 0; }
+.findingList li {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.findingList li:first-child { border-top: none; }
+.findingList p { margin: 0; font-size: 13.5px; line-height: 1.45; }
+
+.findingHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.findingHead code {
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+  opacity: 0.75;
+}
+
+.sevTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.sevTag.reject { color: var(--bad); background: var(--bad-bg); }
+.sevTag.clarify { color: var(--warn); background: var(--warn-bg); }
+.sevTag.warning { color: var(--warn); background: var(--warn-bg); }
+.sevTag.info { opacity: 0.7; background: var(--border); }
+
+/* What the student was actually told, quoted so the coordinator can see
+   the request rather than guess at it. */
+.findingRemedy {
+  margin-top: 5px !important;
+  font-size: 12.5px !important;
+  opacity: 0.85;
+}
+
+/* ----------------------- Advisory reading -------------------------- */
+.advisory .advisoryLine {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.advisoryQuestions {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+/* Deliberately quiet: the model's reading is context, not a verdict. */
+.advisoryFoot {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  opacity: 0.65;
+  font-style: italic;
+}
+
+/* -------------------- Submitted documents -------------------------- */
+.docList {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 16px;
+}
+.docList h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-h);
+}
+.docRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+.docRow:first-of-type { border-top: none; }
+.docRow:hover { opacity: 0.8; }
+.docRow strong { display: block; font-size: 13.5px; color: var(--text-h); }
+.docRow small { font-size: 11.5px; opacity: 0.7; }
+.docRow code { font-size: 11px; opacity: 0.6; white-space: nowrap; }
+
+/* --------------------- Acknowledging open points -------------------- */
+.ackBox {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.ackBox strong { display: block; font-size: 13px; color: var(--text-h); }
+.ackBox p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text); }
+
+.ackCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.ackCheck input { width: 15px; height: 15px; cursor: pointer; }
