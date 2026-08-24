@@ -132,6 +132,21 @@ class StorageService:
     # Public API — path accessors
     # ------------------------------------------------------------------
 
+    def task_dir(self, task_id: str) -> Path:
+        """Return the task's directory, asserting it exists.
+
+        The contract flow stores exactly two files per task and reaches them
+        through original_path/signed_path. The report-review flow stores a
+        variable set — the three submitted attachments alongside the generated
+        certificate — so it needs the directory itself. Path resolution stays
+        centralised here either way: callers never build a path from a
+        client-supplied id.
+
+        Raises:
+            TaskNotFoundError: unknown id, expired task, or a traversal attempt.
+        """
+        return self._resolve_task_dir(task_id, must_exist=True)
+
     def original_path(self, task_id: str) -> Path:
         """Return the path to the uploaded PDF, asserting the task exists."""
         return self._resolve_task_dir(task_id, must_exist=True) / ORIGINAL_NAME
