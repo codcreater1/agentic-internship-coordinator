@@ -34,6 +34,16 @@ All notable updates to the Agentic Internship Coordinator.
 - Certificate panel signs from a drawn signature; it does not appear for a
   rejected or clarification-held package, and requires an explicit
   acknowledgement for one carrying open points.
+### Added — completion review n8n workflow
+- `n8n/internship-report-review-workflow.json`: Gmail trigger on subject
+  "Internship Report" → POST /reports/from-n8n → reply to the student, and
+  notify the coordinator when a package needs one.
+- Posts the PDFs themselves rather than extracted text: the backend hashes the
+  bytes it received onto the certificate and refuses scans, and extracting in
+  n8n would throw away both.
+- Stops before signing, deliberately. Verified over the wire that three parts
+  named `files` classify correctly and return 201.
+- `docs/n8n-integration.md` now covers both workflows.
 ### Changed
 - `StorageService.task_dir()` added — the report flow stores several files per
   task, where the contract flow stores exactly two and reaches them by name.
