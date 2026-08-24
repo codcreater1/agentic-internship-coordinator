@@ -44,6 +44,11 @@ All notable updates to the Agentic Internship Coordinator.
 - Stops before signing, deliberately. Verified over the wire that three parts
   named `files` classify correctly and return 201.
 - `docs/n8n-integration.md` now covers both workflows.
+### Fixed
+- nginx served `index.html` with no cache directives, so browsers cached it
+  heuristically and kept loading the previous deploy's hashed bundle. A new
+  frontend release was invisible until a hard refresh. index.html is now
+  `no-cache`; /assets/ (content-hashed) is immutable for a year.
 ### Changed
 - `StorageService.task_dir()` added — the report flow stores several files per
   task, where the contract flow stores exactly two and reaches them by name.
