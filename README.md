@@ -92,7 +92,7 @@ Direct API / dashboard uploads follow the same path from **FastAPI backend** onw
 | LLM | Groq `llama-3.3-70b-versatile` (default) — any OpenAI-compatible endpoint (Gemini, OpenAI…) |
 | Observability | LangFuse |
 | Frontend | React + Vite |
-| Automation | n8n (Gmail trigger + reply) |
+| Automation | n8n (Gmail trigger + reply) — one workflow per phase |
 | PDF | PyMuPDF, reportlab, pypdf |
 | Storage | SQLite (stdlib) |
 | Deployment | Docker, Coolify, Caddy |
