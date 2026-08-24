@@ -28,7 +28,7 @@ A candidate emails their CV → the system evaluates it end-to-end and replies a
 - 🔒 **Mandatory-field gate** — an agreement names a host organisation and a workplace supervisor, so an application that omits them is held at **`request_clarification`** and the candidate is asked for exactly what is missing. An incomplete application can never reach contract generation — and is never rejected for an omission it can fix
 - 🧯 **Degrades safely** — if the model is unreachable (outage, spent token quota) the application is queued for manual review rather than judged by the keyword fallback, so infrastructure trouble never turns into a rejection email
 - 📝 **Official contract generation** — produces the UTA *Appendix No. 3* internship agreement, signed electronically in the dashboard (canvas signature pad → embedded in the PDF)
-- 📊 **Recruiter dashboard** — React UI with live candidate inbox, evaluation detail, and contract signing
+- 📊 **Recruiter dashboard** — React UI with two queues: the candidate inbox (evaluation detail, contract signing) and the completion queue (verified figures, findings, certificate signing)
 - 🔭 **LLM observability** — every model call traced in LangFuse (latency, tokens, prompt, output)
 - 🛡️ **Prompt-injection hardened** — evaluated against a 10-technique red-team set (see [Security](#️-security--robustness))
 - 🎓 **End-of-internship review** — when the placement finishes the student emails three PDFs (report, employer evaluation, attendance record). Deterministic checks count the attended days, cross-check identity across all three, and verify the employer actually signed; a coordinator then signs the **completion certificate**. See [Completing an internship](#-completing-an-internship)
@@ -264,6 +264,20 @@ the student — signing past a missing supervisor signature would produce a
 certificate resting on a document nobody signed. A package with open points can
 be signed with `acknowledge_warnings`, and the acknowledged codes are printed on
 the certificate.
+
+### In the dashboard
+
+The sidebar switches between **Inbox** (applications) and **Completions**. The
+completion queue is organised by who has to act next — *To sign*, *With
+student*, *Signed* — rather than by raw status, and the badge counts only what
+is genuinely waiting on the coordinator.
+
+Opening a submission shows the verified figures the certificate would assert,
+the findings grouped by what they demand, the exact wording the student was
+emailed, and the three submitted PDFs with their hashes. The signature panel
+refuses to appear for a package that is rejected or still waiting on the
+student, and requires an explicit acknowledgement before signing one that
+carries open points.
 
 Full reference: [`docs/report-review.md`](docs/report-review.md).
 

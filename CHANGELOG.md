@@ -25,6 +25,15 @@ All notable updates to the Agentic Internship Coordinator.
 - `ata-test-docs/tool/completion_docs.py` generates the three documents across
   nine scenarios, failures included.
 - 55 new tests; the suite is now 85.
+### Added — completion queue in the dashboard
+- Sidebar switches between the applications inbox and the new completion queue,
+  with a badge counting only what is waiting on the coordinator.
+- Queue tabs are organised by who acts next (to sign / with student / signed).
+- Submission view shows verified figures, findings grouped by what they demand,
+  the exact remedy the student was emailed, and the submitted PDFs with hashes.
+- Certificate panel signs from a drawn signature; it does not appear for a
+  rejected or clarification-held package, and requires an explicit
+  acknowledgement for one carrying open points.
 ### Changed
 - `StorageService.task_dir()` added — the report flow stores several files per
   task, where the contract flow stores exactly two and reaches them by name.
