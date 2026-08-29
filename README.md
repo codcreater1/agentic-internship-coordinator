@@ -28,10 +28,9 @@ A candidate emails their CV → the system evaluates it end-to-end and replies a
 - 🔒 **Mandatory-field gate** — an agreement names a host organisation and a workplace supervisor, so an application that omits them is held at **`request_clarification`** and the candidate is asked for exactly what is missing. An incomplete application can never reach contract generation — and is never rejected for an omission it can fix
 - 🧯 **Degrades safely** — if the model is unreachable (outage, spent token quota) the application is queued for manual review rather than judged by the keyword fallback, so infrastructure trouble never turns into a rejection email
 - 📝 **Official contract generation** — produces the UTA *Appendix No. 3* internship agreement, signed electronically in the dashboard (canvas signature pad → embedded in the PDF)
-- 📊 **Recruiter dashboard** — React UI with two queues: the candidate inbox (evaluation detail, contract signing) and the completion queue (verified figures, findings, certificate signing)
+- 📊 **Recruiter dashboard** — React UI with live candidate inbox, evaluation detail, and contract signing
 - 🔭 **LLM observability** — every model call traced in LangFuse (latency, tokens, prompt, output)
 - 🛡️ **Prompt-injection hardened** — evaluated against a 10-technique red-team set (see [Security](#️-security--robustness))
-- 🎓 **End-of-internship review** — when the placement finishes the student emails three PDFs (report, employer evaluation, attendance record). Deterministic checks count the attended days, cross-check identity across all three, and verify the employer actually signed; a coordinator then signs the **completion certificate**. See [Completing an internship](#-completing-an-internship)
 - 💾 **Persistent** — applications stored in SQLite, survive restarts
 
 ---
@@ -92,7 +91,7 @@ Direct API / dashboard uploads follow the same path from **FastAPI backend** onw
 | LLM | Groq `llama-3.3-70b-versatile` (default) — any OpenAI-compatible endpoint (Gemini, OpenAI…) |
 | Observability | LangFuse |
 | Frontend | React + Vite |
-| Automation | n8n (Gmail trigger + reply) — one workflow per phase |
+| Automation | n8n (Gmail trigger + reply) |
 | PDF | PyMuPDF, reportlab, pypdf |
 | Storage | SQLite (stdlib) |
 | Deployment | Docker, Coolify, Caddy |
@@ -116,13 +115,6 @@ Base URL: `/` (no global prefix). Interactive docs at `/docs`.
 | `POST` | `/applications/by-id/{id}/sign` | Embed the coordinator's signature |
 | `POST` | `/applications/by-id/{id}/send-contract` | Email the signed agreement to a chosen recipient |
 | `GET` | `/pdf/download/{task_id}` | Download a signed contract (token-gated) |
-| `POST` | `/reports/` | Review an end-of-internship package (multipart: `intern_email`, three `files`) |
-| `POST` | `/reports/from-n8n` | Same, behind the shared Bearer token |
-| `GET` | `/reports/` | Completion queue (`?status=pending`) |
-| `GET` | `/reports/by-id/{id}` | Full review result, findings, advisory reading |
-| `POST` | `/reports/by-id/{id}/sign` | Issue and sign the completion certificate |
-| `GET` | `/reports/by-id/{id}/certificate` | Download the signed certificate (token-gated) |
-| `GET` | `/reports/for-application/{id}` | Every completion attempt for one candidate |
 
 > Anything acting on a specific candidate takes their stable **`id`**, never a list
 > position. Applications arrive from n8n continuously and the list is ordered
@@ -133,9 +125,6 @@ Base URL: `/` (no global prefix). Interactive docs at `/docs`.
 **Decision values** returned in `status`: `interview`, `request_clarification`
 (shown as *needs info* — mandatory placement details missing), `pending`,
 `rejected`. When `missing_fields` is non-empty no contract exists.
-
-Completion packages use the same vocabulary minus `interview`, plus `approved`
-(all checks passed, awaiting signature) and `signed`.
 
 ---
 
@@ -171,115 +160,6 @@ an unavailable one.
 
 Ids reach SQLite only as bound parameters, so injection attempts are inert and
 leave the table intact.
-
----
-
-## 🎓 Completing an internship
-
-The other end of the system. Everything above decides whether a student may
-**start** a placement. This decides whether they **finished** one, and issues the
-completion certificate the registrar acts on.
-
-The student emails three PDFs — their report, the employer evaluation form, and
-the attendance record. Attachments are classified by **reading** them, so
-filenames and attachment order do not matter.
-
-### Who decides
-
-| | decides the outcome | can reject | can sign |
-|---|---|---|---|
-| Deterministic checks | ✅ everything | ✅ | ❌ |
-| LLM | ❌ nothing | ❌ | ❌ |
-| Named coordinator | final call | — | ✅ |
-
-A completion certificate is an institutional claim about a real person — that
-they attended twenty days at a named company. The evidence is countable: dates,
-hours, a supervisor's signature, a score. So counting decides, and the model is
-kept to reading the report and raising questions for the coordinator. It runs
-*after* the status is fixed, and **the service decides identically with it
-switched off**.
-
-That is a real difference from CV screening, where the LLM produces the score and
-an outage means an application is held rather than judged by the keyword
-fallback. Here a model outage costs the coordinator some commentary and nothing
-else — a completion package is never held because an API was down.
-
-### Nobody is refused for something they can fix
-
-Only **two** findings reject: the employer scored the internship below the pass
-mark, and the report is a copy of another accepted submission. Both need a
-conversation with the coordinator, not a corrected attachment.
-
-Everything else — an unsigned form, nineteen days instead of twenty, a name that
-does not match across the three documents — lands at `request_clarification`
-with a specific instruction. The same principle the application flow already
-follows for incomplete applications, applied at the other end.
-
-```
-2. Only 18 attended working days could be verified; 20 are required.
-   What to do: Submit an attendance record showing at least 20 attended
-   working days of at least 4 hours each, inside the declared internship
-   period. If you did work those days, ask the company to reissue the record.
-```
-
-Every actionable finding carries that instruction, the student's email is
-assembled from them, and a test enforces it — a request the student cannot act on
-is a bug, not a style problem.
-
-### What it catches that a single document cannot
-
-The realistic failure mode for internship reports is not fabrication, it is
-circulation: last year's cohort passes its reports down, or two students at the
-same company submit one document with the names swapped. Every copy is
-individually perfect, so no per-document check sees it.
-
-Each accepted report is therefore kept as a TF-IDF vector and every new report
-scored against all of them. Plain Python — no dependency, no API cost — and it
-runs *before* the model is called, so a copied report costs nothing to reject.
-The corpus is rebuilt from SQLite at startup, so a restart does not amnesty a
-report copied from one accepted last week.
-
-Two others worth naming:
-
-- **Scans are refused.** A photograph of a signed form passes every text-based
-  check *vacuously* — there is no text to contradict anything. Reporting that as
-  verified would be worse than asking again.
-- **Weekends do not pad the count.** Twenty weekdays plus the weekends between
-  them is not twenty-six working days; the extra entries are excluded and
-  reported, so a coordinator sees them either way.
-
-### The certificate is bound to its documents
-
-The signed certificate prints the **SHA-256 of the three attachments** on its
-face. A certificate detached from its documents attests to nothing — anyone
-holding it could pair it with a different report. With the hash printed, the
-claim is checkable: rehash the three files and compare.
-
-It also says what it does not claim: *"It attests to the completeness and
-internal consistency of the submitted record. It is not an assessment of the
-quality of the work performed."*
-
-Signing is refused for a rejected package, and refused for one still waiting on
-the student — signing past a missing supervisor signature would produce a
-certificate resting on a document nobody signed. A package with open points can
-be signed with `acknowledge_warnings`, and the acknowledged codes are printed on
-the certificate.
-
-### In the dashboard
-
-The sidebar switches between **Inbox** (applications) and **Completions**. The
-completion queue is organised by who has to act next — *To sign*, *With
-student*, *Signed* — rather than by raw status, and the badge counts only what
-is genuinely waiting on the coordinator.
-
-Opening a submission shows the verified figures the certificate would assert,
-the findings grouped by what they demand, the exact wording the student was
-emailed, and the three submitted PDFs with their hashes. The signature panel
-refuses to appear for a package that is rejected or still waiting on the
-student, and requires an explicit acknowledgement before signing one that
-carries open points.
-
-Full reference: [`docs/report-review.md`](docs/report-review.md).
 
 ---
 
@@ -336,7 +216,7 @@ A root `Dockerfile` builds the backend; `docker-compose.yaml` runs backend + fro
 
 ```bash
 cd backend
-pytest                 # 85 hermetic, offline tests — no network, temp DB
+pytest                 # 26 hermetic, offline tests — no network, temp DB
 ```
 
 Covers the decision thresholds, the EU-eligibility and mandatory-field gates,
@@ -344,11 +224,6 @@ both contract entry points, id-based addressing under a shifting list, upload
 validation, outage handling, injection and out-of-range input, and the
 signing/download regressions. Each was written against the defect it guards,
 and checked to fail without its fix.
-
-The completion-review suite (`tests/test_reports.py`) asserts each finding's
-**severity**, not merely that something fired: a check that rejects where it
-should ask for a correction refuses a student for something they could have
-fixed, and an assertion that only looked for "some finding" would miss it.
 
 ### End-to-end corpus
 
@@ -377,8 +252,8 @@ spent LLM quota cannot be mistaken for a regression.
 ```
 backend/     FastAPI app — routers, agents (LangGraph), services, core (llm, config, security)
 frontend/    React + Vite dashboard
-n8n/         Gmail → evaluate → reply workflows (application + completion review)
-docs/        Integration guides, incl. report-review.md (completion gates)
+n8n/         Gmail → evaluate → reply workflow
+docs/        Integration guides
 Dockerfile   Root image (backend); docker-compose for full stack
 ```
 

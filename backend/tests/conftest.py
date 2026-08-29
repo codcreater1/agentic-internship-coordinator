@@ -13,16 +13,6 @@ os.environ["LLM_API_KEY"] = ""
 
 from app.core.config import settings  # noqa: E402
 from app.services import application_repository as repo  # noqa: E402
-from app.services import report_repository  # noqa: E402
 
-_TEST_ROOT = Path(tempfile.mkdtemp(prefix="aic-test-"))
-settings.db_path = _TEST_ROOT / "test.db"
-
-# Task directories hold submitted attachments and generated certificates. Point
-# them at the same temp root so a test run leaves nothing in the working tree.
-settings.storage_root = _TEST_ROOT / "tasks"
-
-# Both tables, because tests construct TestClient(app) at module level, which
-# does not run the lifespan hook that would otherwise create them.
+settings.db_path = Path(tempfile.mkdtemp(prefix="aic-test-")) / "test.db"
 repo.init_db()
-report_repository.init_db()
